@@ -1,9 +1,10 @@
+// src/components/hooks/useFeed.jsx
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import axiosSecure from "../utils/axiosSecure";
 import { getAccessToken } from "../../redux/store/tokenManager";
 
-export default function useFeed(selectedTag, searchQuery) {
+export default function useFeed(_, searchQuery) {
   const [posts, setPosts] = useState([]);
   const [next, setNext] = useState(null);
   const loaderRef = useRef(null);
@@ -23,97 +24,83 @@ export default function useFeed(selectedTag, searchQuery) {
     return { results: data.results || [], next: data.next || null };
   };
 
-  // LOGIN → axiosSecure + /v1
-  // LOGOUT → axios + /api/v1
-  const getClientAndPrefix = () => {
+  const getClient = () => {
     const token = getAccessToken();
-    if (token) {
-      return { client: axiosSecure, prefix: "/v1" };
-    }
-    return { client: axios, prefix: "/api/v1" };
+    return token ? axiosSecure : axios;
   };
 
-  // LOAD FIRST PAGE
-  const loadFeed = async () => {
-    const { client, prefix } = getClientAndPrefix();
+  /** -----------------------------
+   * LOAD FEED (NORMAL OR SEARCH)
+   -------------------------------- */
+ const loadFeed = async () => {
+  const client = getClient();
+  let url = "";
 
-    let url = `${prefix}/community/posts/`;
+  if (searchQuery && searchQuery.trim() !== "") {
+    // Convert slug: artificial-intelligence → artificial intelligence
+    const cleanQuery = searchQuery.replace(/-/g, " ");
 
-    if (selectedTag) url += `?tag=${selectedTag}`;
-    if (searchQuery) url += `${selectedTag ? "&" : "?"}search=${searchQuery}`;
+    url = `v1/community/search/?q=${cleanQuery}`;
+  } else {
+    const prefix = getAccessToken() ? "/v1" : "/api/v1";
+    url = `${prefix}/community/posts/`;
+  }
 
-    const res = await client.get(url);
-    const parsed = extractResults(res.data);
-    const freshPosts = parsed.results.map(normalize);
+  setPosts([]);
+  setNext(null);
 
-    setPosts((prev) => {
-      const map = new Map();
+  const res = await client.get(url);
+  const parsed = extractResults(res.data);
+  const freshPosts = parsed.results.map(normalize);
 
-      prev.forEach((p) => map.set(p.id, p));
+  setPosts(freshPosts);
+  setNext(parsed.next);
+};
 
-      freshPosts.forEach((p) => {
-        if (map.has(p.id)) {
-          const local = map.get(p.id);
-          map.set(p.id, { ...p, ...local }); // preserve likes
-        } else {
-          map.set(p.id, p);
-        }
-      });
 
-      return Array.from(map.values()).sort((a, b) => b.id - a.id);
-    });
-
-    setNext(parsed.next);
-  };
-
-  // LOAD MORE
+  /** -----------------------------
+   * INFINITE LOAD MORE
+   -------------------------------- */
   const loadMore = async () => {
     if (!next) return;
 
-    const token = getAccessToken();
-    const client = token ? axiosSecure : axios;
-
+    const client = getClient();
     const res = await client.get(next);
     const parsed = extractResults(res.data);
-
     const newPosts = parsed.results.map(normalize);
 
-    setPosts((prev) => {
-      const map = new Map();
-      prev.forEach((p) => map.set(p.id, p));
-
-      newPosts.forEach((p) => {
-        if (map.has(p.id)) {
-          const local = map.get(p.id);
-          map.set(p.id, { ...p, ...local });
-        } else {
-          map.set(p.id, p);
-        }
-      });
-
-      return Array.from(map.values()).sort((a, b) => b.id - a.id);
-    });
-
+    setPosts((prev) => [...prev, ...newPosts]);
     setNext(parsed.next);
   };
 
+  /** -----------------------------
+   * INFINITE SCROLL OBSERVER
+   -------------------------------- */
   useEffect(() => {
     if (!loaderRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && next) loadMore();
+        if (entries[0].isIntersecting) loadMore();
       },
-      { threshold: 1 }
+      { threshold: 0.1 }
     );
 
     observer.observe(loaderRef.current);
+
     return () => observer.disconnect();
   }, [next]);
 
+  /** -----------------------------
+   * RELOAD FEED WHEN SEARCH CHANGES
+   -------------------------------- */
   useEffect(() => {
-    loadFeed();
-  }, [selectedTag, searchQuery]);
+    const debounce = setTimeout(() => {
+      loadFeed();
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
 
   return { posts, setPosts, loaderRef };
 }

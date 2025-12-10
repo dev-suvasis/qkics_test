@@ -4,6 +4,7 @@ import { CiEdit } from "react-icons/ci";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearPostViewState } from "../redux/slices/postViewSlice";
+import { FaUser } from "react-icons/fa";
 
 
 import axiosSecure from "../components/utils/axiosSecure";
@@ -231,7 +232,23 @@ useEffect(() => {
                 ? `${profileUser.first_name} ${profileUser.last_name}`
                 : profileUser.username}
             </h1>
-            <p className="text-neutral-400">@{profileUser.username} — {profileUser.user_type}</p>
+            <p className="text-neutral-400 mt-2 mb-2"><span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+                border transition-all
+            
+                border-blue-400 bg-blue-400/10 text-blue-500
+                dark:border-blue-500 dark:bg-blue-500/20 dark:text-blue-300">@{profileUser.username}</span> &nbsp;— &nbsp; <span
+                            className="
+                inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+                border transition-all
+            
+                border-grey-400 bg-grey-400/10 text-grey-500
+                dark:border-grey-500 dark:bg-grey-500/20 dark:text-grey-300
+              "
+                          >
+                            <FaUser />&nbsp;Normal
+                          </span>
+            
+                        </p>
           </div>
 
           <button

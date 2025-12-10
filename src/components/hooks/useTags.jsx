@@ -10,8 +10,7 @@ export default function useTags() {
     try {
       // FIXED URL + using axiosSecure
       const res = await axiosSecure.get("/v1/community/tags/");
-      
-      console.log("🔥 TAGS LOADED:", res.data);
+    
 
       setTags(Array.isArray(res.data) ? res.data : []);
     } catch (err) {

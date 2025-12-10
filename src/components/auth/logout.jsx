@@ -20,7 +20,7 @@ function Logout() {
     const doLogout = async () => {
       try {
         await axiosSecure.post(
-          `v1/auth/logout/`,
+          `/v1/auth/logout/`,
           {},
           { withCredentials: true }
         );

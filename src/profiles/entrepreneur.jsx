@@ -6,6 +6,7 @@ import axiosSecure from "../components/utils/axiosSecure";
 
 import { useAlert } from "../context/AlertContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { IoIosRocket } from "react-icons/io";
 
 import { useDispatch, useSelector } from "react-redux";
 import { loadUserPosts, removePost } from "../redux/slices/postsSlice";
@@ -224,11 +225,27 @@ export default function EntrepreneurProfile({ theme }) {
                 ? `${user.first_name} ${user.last_name}`
                 : user.username}
             </h1>
-            <p className="text-neutral-400">@{user.username} — Entrepreneur</p>
+            <p className="text-neutral-400 mt-2 mb-2"><span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+                border transition-all
+            
+                border-blue-400 bg-blue-400/10 text-blue-500
+                dark:border-blue-500 dark:bg-blue-500/20 dark:text-blue-300">@{user.username}</span> &nbsp;— &nbsp; <span
+                            className="
+                inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+                border transition-all
+            
+                border-orange-400 bg-orange-400/10 text-orange-500
+                dark:border-orange-500 dark:bg-orange-500/20 dark:text-orange-300
+              "
+                          >
+                            <IoIosRocket />&nbsp;Entreprenuer
+                          </span>
+            
+                        </p>
 
             {entreData.verified_by_admin && (
               <div className="mt-1 text-green-500 text-sm font-semibold">
-                ✔ Verified Entrepreneur
+                Verified Entrepreneur
               </div>
             )}
           </div>

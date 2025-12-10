@@ -1,11 +1,11 @@
 // src/components/navbar.jsx
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { FaUser, FaKey, FaSignOutAlt } from "react-icons/fa";
 
-import LoginModal from "./auth/login";
-import SignupModal from "./auth/register";
+import LoginModal from "./auth/Login";
+import SignupModal from "./auth/Signup";
 import ChangePasswordModal from "./auth/change_password";
 
 import {
@@ -15,43 +15,50 @@ import {
   faMoon,
 } from "@fortawesome/free-solid-svg-icons";
 
-function Navbar({ theme, onToggleTheme, user, onSearch }) {
+function Navbar({ theme, onToggleTheme, user }) {
   const isDark = theme === "dark";
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
 
   const [dropdown, setDropdown] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [showChangePass, setShowChangePass] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const navigate = useNavigate();
-  const toggleDropdown = () => setDropdown((v) => !v);
 
   const isLoggedIn = !!user;
 
-  /* -------------------------
-     PROFILE REDIRECT LOGIC
-  -------------------------- */
+  // Sync Input when URL changes
+  useEffect(() => {
+    setSearchQuery(searchParams.get("search") || "");
+  }, [searchParams]);
+
+  // SEARCH TRIGGERED ONLY ON ENTER
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      const next = new URLSearchParams(searchParams);
+      if (searchQuery.trim()) next.set("search", searchQuery.trim());
+      else next.delete("search");
+
+      setSearchParams(next);
+    }
+  };
+
+  const toggleDropdown = () => setDropdown((v) => !v);
+
   const goToProfile = () => {
     setDropdown(false);
 
-    if (!user) {
-      navigate("/profile");
-      return;
-    }
+    if (!user) return navigate("/profile");
 
-    if (user.user_type === "expert") {
-      navigate("/expert");
-    } else if (user.user_type === "entrepreneur") {
-      navigate("/entrepreneur");
-    } else {
-      navigate("/profile");
-    }
+    if (user.user_type === "expert") navigate("/expert");
+    else if (user.user_type === "entrepreneur") navigate("/entrepreneur");
+    else navigate("/profile");
   };
 
   return (
     <>
-      {/* NAVBAR */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 border-b ${
           isDark
@@ -60,7 +67,7 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
         }`}
       >
         <div className="max-w-6xl mx-auto pr-4 h-14 flex items-center gap-4 relative">
-          
+
           {/* LOGO */}
           <div className="flex items-center gap-2 mr-2">
             <Link to="/">
@@ -110,10 +117,8 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    onSearch(e.target.value);
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown} // ENTER ONLY
                   placeholder="Search posts..."
                   className="bg-transparent outline-none w-full text-xs placeholder:text-neutral-400"
                 />
@@ -123,7 +128,6 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
 
           {/* RIGHT SECTION */}
           <div className="flex items-center gap-3 text-xs">
-
             {/* Try Q-KICS */}
             <button className="hidden sm:inline-flex px-3 py-1.5 rounded-full bg-red-500 text-white hover:bg-red-600 font-semibold">
               Try Q-KICS +
@@ -188,7 +192,6 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
                         : "bg-white border-neutral-200 text-black"
                     }`}
                   >
-                    {/* PROFILE */}
                     <button
                       className="w-full flex items-center gap-2 px-4 py-2 hover:bg-neutral-700/20 rounded-xl"
                       onClick={goToProfile}
@@ -196,7 +199,6 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
                       <FaUser /> My Profile
                     </button>
 
-                    {/* CHANGE PASSWORD */}
                     <button
                       className="w-full flex items-center gap-2 px-4 py-2 hover:bg-neutral-700/20 rounded-xl"
                       onClick={() => {
@@ -207,7 +209,6 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
                       <FaKey /> Change Password
                     </button>
 
-                    {/* LOGOUT */}
                     <button
                       onClick={() => {
                         setDropdown(false);
@@ -240,14 +241,28 @@ function Navbar({ theme, onToggleTheme, user, onSearch }) {
       {/* LOGIN MODAL */}
       {showLogin && (
         <ModalOverlay close={() => setShowLogin(false)}>
-          <LoginModal isDark={isDark} onClose={() => setShowLogin(false)} />
+          <LoginModal
+            isDark={isDark}
+            onClose={() => setShowLogin(false)}
+            openSignup={() => {
+              setShowLogin(false);
+              setShowSignup(true);
+            }}
+          />
         </ModalOverlay>
       )}
 
       {/* SIGNUP MODAL */}
       {showSignup && (
         <ModalOverlay close={() => setShowSignup(false)}>
-          <SignupModal isDark={isDark} onClose={() => setShowSignup(false)} />
+          <SignupModal
+            isDark={isDark}
+            onClose={() => setShowSignup(false)}
+            openLogin={() => {
+              setShowSignup(false);
+              setShowLogin(true);
+            }}
+          />
         </ModalOverlay>
       )}
 
@@ -268,14 +283,16 @@ export default Navbar;
 
 /* -------------------------------------
    MODAL BACKDROP
---------------------------------------- */
+-------------------------------------- */
 function ModalOverlay({ children, close }) {
   return (
     <div
-      onClick={close}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
     >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+      <div onMouseDown={(e) => e.stopPropagation()}>{children}</div>
     </div>
   );
 }

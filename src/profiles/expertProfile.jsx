@@ -3,6 +3,7 @@ import { CiEdit } from "react-icons/ci";
 import axiosSecure from "../components/utils/axiosSecure";
 import { useAlert } from "../context/AlertContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { FaGraduationCap } from "react-icons/fa";
 
 import { useDispatch, useSelector } from "react-redux";
 import { loadUserPosts, removePost } from "../redux/slices/postsSlice";
@@ -153,38 +154,38 @@ export default function ExpertProfile({ theme }) {
   /* ---------------- DELETE POST ---------------- */
 
   const handleDelete = async (postId) => {
-  showConfirm({
-    title: "Delete Post?",
-    message: "Are you sure you want to delete this post? This cannot be undone.",
-    confirmText: "Delete",
-    cancelText: "Cancel",
-    type: "danger",
+    showConfirm({
+      title: "Delete Post?",
+      message: "Are you sure you want to delete this post? This cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
 
-    onConfirm: async () => {
-      try {
-        await axiosSecure.delete(`/v1/community/posts/${postId}/`);
-        dispatch(removePost(postId)); // remove from redux
-        showAlert("Post deleted successfully!", "success");
-      } catch (err) {
-        console.log(err);
-        showAlert("Delete failed!", "error");
+      onConfirm: async () => {
+        try {
+          await axiosSecure.delete(`/v1/community/posts/${postId}/`);
+          dispatch(removePost(postId)); // remove from redux
+          showAlert("Post deleted successfully!", "success");
+        } catch (err) {
+          console.log(err);
+          showAlert("Delete failed!", "error");
+        }
+      },
+    });
+  };
+
+
+  useEffect(() => {
+    if (postView.from === "expert-profile") {
+      if (postView.tab) {
+        setActiveTab(postView.tab);
       }
-    },
-  });
-};
 
-
-useEffect(() => {
-  if (postView.from === "expert-profile") {
-    if (postView.tab) {
-      setActiveTab(postView.tab);
+      setTimeout(() => {
+        window.scrollTo(0, postView.scroll || 0);
+      }, 50);
     }
-
-    setTimeout(() => {
-      window.scrollTo(0, postView.scroll || 0);
-    }, 50);
-  }
-}, [postView]);
+  }, [postView]);
 
 
 
@@ -199,17 +200,15 @@ useEffect(() => {
 
   return (
     <div
-      className={`min-h-screen pt-20 px-4 ${
-        isDark ? "bg-neutral-950 text-white" : "bg-neutral-100 text-black"
-      }`}
+      className={`min-h-screen pt-20 px-4 ${isDark ? "bg-neutral-950 text-white" : "bg-neutral-100 text-black"
+        }`}
     >
       <div className="max-w-4xl mx-auto">
 
         {/* HEADER */}
         <div
-          className={`p-6 rounded-xl shadow flex gap-6 items-center mb-6 ${
-            isDark ? "bg-neutral-900 text-white" : "bg-white text-black"
-          }`}
+          className={`p-6 rounded-xl shadow flex gap-6 items-center mb-6 ${isDark ? "bg-neutral-900 text-white" : "bg-white text-black"
+            }`}
         >
           <div className="relative w-28 h-28">
             {user.profile_picture ? (
@@ -230,17 +229,33 @@ useEffect(() => {
             </label>
           </div>
 
-          <div>
+          <div >
             <h1 className="text-3xl font-bold">
               {user.first_name || user.last_name
                 ? `${user.first_name} ${user.last_name}`
                 : user.username}
             </h1>
-            <p className="text-neutral-400">@{user.username} — Expert</p>
+            <p className="text-neutral-400 mt-2 mb-2"><span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+    border transition-all
+
+    border-blue-400 bg-blue-400/10 text-blue-500
+    dark:border-blue-500 dark:bg-blue-500/20 dark:text-blue-300">@{user.username}</span> &nbsp;— &nbsp; <span
+                className="
+    inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+    border transition-all
+
+    border-purple-400 bg-purple-400/10 text-purple-500
+    dark:border-purple-500 dark:bg-purple-500/20 dark:text-purple-300
+  "
+              >
+                <FaGraduationCap />&nbsp;Expert
+              </span>
+
+            </p>
 
             {expertData.verified_by_admin && (
               <div className="mt-1 text-green-500 text-sm font-semibold">
-                ✔ Verified Expert
+                Verified Expert
               </div>
             )}
           </div>
@@ -250,22 +265,20 @@ useEffect(() => {
         <div className="flex justify-center gap-10 border-b pb-2">
           <button
             onClick={() => setActiveTab("about")}
-            className={`pb-2 text-lg font-medium ${
-              activeTab === "about"
-                ? "text-red-500 border-b-2 border-red-500"
-                : "text-neutral-500"
-            }`}
+            className={`pb-2 text-lg font-medium ${activeTab === "about"
+              ? "text-red-500 border-b-2 border-red-500"
+              : "text-neutral-500"
+              }`}
           >
             About
           </button>
 
           <button
             onClick={() => setActiveTab("posts")}
-            className={`pb-2 text-lg font-medium ${
-              activeTab === "posts"
-                ? "text-red-500 border-b-2 border-red-500"
-                : "text-neutral-500"
-            }`}
+            className={`pb-2 text-lg font-medium ${activeTab === "posts"
+              ? "text-red-500 border-b-2 border-red-500"
+              : "text-neutral-500"
+              }`}
           >
             Posts
           </button>
@@ -280,19 +293,17 @@ useEffect(() => {
 
               {/* LEFT-SIDE TABS */}
               <div
-                className={`w-1/4 sticky top-24 h-[80vh] p-4 rounded-xl shadow overflow-y-auto ${
-                  isDark ? "bg-neutral-900 text-white" : "bg-white text-black"
-                }`}
+                className={`w-1/4 sticky top-24 h-[80vh] p-4 rounded-xl shadow overflow-y-auto ${isDark ? "bg-neutral-900 text-white" : "bg-white text-black"
+                  }`}
               >
-                {["user","expert","experience","education","certification","honors"].map((tab) => (
+                {["user", "expert", "experience", "education", "certification", "honors"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setAboutTab(tab)}
-                    className={`block w-full text-left py-2 px-2 rounded ${
-                      aboutTab === tab
-                        ? "text-red-500 font-semibold"
-                        : "text-neutral-500"
-                    }`}
+                    className={`block w-full text-left py-2 px-2 rounded ${aboutTab === tab
+                      ? "text-red-500 font-semibold"
+                      : "text-neutral-500"
+                      }`}
                   >
                     {tab === "user" && "User Details"}
                     {tab === "expert" && "Expert Details"}
@@ -358,7 +369,7 @@ useEffect(() => {
               editingPost={editingPost}
               setEditingPost={setEditingPost}
               handleDelete={handleDelete}
-              setShowLogin={() => {}}
+              setShowLogin={() => { }}
             />
           )}
         </div>
