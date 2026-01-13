@@ -159,6 +159,7 @@ export default function UserPosts({
                         className="px-1 py-1 hover:bg-gray-200/30 w-full flex justify-center"
                       >
                         <HiPencilAlt className="text-xl" />
+                        
                       </button>
 
                       {/* DELETE */}

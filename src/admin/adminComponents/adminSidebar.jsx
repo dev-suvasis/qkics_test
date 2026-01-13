@@ -11,7 +11,7 @@ export default function AdminSidebar({ role }) {
     >
       <nav className="flex flex-col gap-2">
 
-        <div className="text-sm font-semibold  dark:text-neutral-400 uppercase mb-2 tracking-wide">
+        <div className="text-sm font-semibold pb-4 border-b border-neutral-300  dark:text-neutral-400 uppercase mb-2 tracking-wide">
           Navigation
         </div>
 
@@ -19,6 +19,7 @@ export default function AdminSidebar({ role }) {
         <SidebarLink to="/adminTags" label="Tags" />
         <SidebarLink to="/adminUsers" label="Users" />
         <SidebarLink to="/adminPosts" label="Posts" />
+        <SidebarLink to="/subscriptions" label="Subscriptions" />
 
         {role === "superadmin" && (
           <>

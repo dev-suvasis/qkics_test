@@ -8,13 +8,18 @@ import axiosSecure from "../../components/utils/axiosSecure";
 // FETCH ALL SLOTS
 export const fetchExpertSlots = createAsyncThunk(
   "expertSlots/fetch",
-  async (_, { rejectWithValue }) => {
+  async (expertUuid, { rejectWithValue }) => {
     try {
-      const userUuid = localStorage.getItem("user_uuid");
-      if (!userUuid) return [];
+      // Use passed UUID (basic profile UUID) or fallback to localStorage
+      const uuidToUse = expertUuid || localStorage.getItem("user_uuid");
+
+      if (!uuidToUse) {
+        console.warn("⚠️ No expert UUID found for fetching slots");
+        return [];
+      }
 
       const res = await axiosSecure.get(
-        `/v1/bookings/experts/${userUuid}/slots/`
+        `/v1/bookings/experts/${uuidToUse}/slots/`
       );
       return res.data;
     } catch (err) {
@@ -115,7 +120,13 @@ const expertSlotsSlice = createSlice({
         state.error = null;
       })
       .addCase(createExpertSlot.fulfilled, (state, action) => {
-        state.items.unshift(action.payload);
+        // Ensure the new slot defaults to available and active for immediate UI consistency
+        const newSlot = {
+          is_available: true,
+          status: "ACTIVE",
+          ...action.payload,
+        };
+        state.items.unshift(newSlot);
       })
       .addCase(createExpertSlot.rejected, (state, action) => {
         state.error = action.payload;

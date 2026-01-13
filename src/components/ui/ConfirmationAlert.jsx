@@ -29,9 +29,9 @@ const ConfirmationAlert = ({
         className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 animate-pop"
       >
         {/* Icon */}
-        <div className="mx-auto mb-3 flex items-center justify-center h-14 w-14 rounded-full bg-red-100 text-red-600 text-4xl">
+        {/* <div className="mx-auto mb-3 flex items-center justify-center h-14 w-14 rounded-full bg-red-100 text-red-600 text-4xl">
           !
-        </div>
+        </div> */}
 
         {/* Title */}
         <h2 className="text-xl font-semibold text-center text-gray-800">
@@ -40,7 +40,7 @@ const ConfirmationAlert = ({
 
         {/* Message */}
         <p className="mt-2 text-center text-gray-600 text-sm">
-          {message}
+          {message} 
         </p>
 
         {/* Buttons */}

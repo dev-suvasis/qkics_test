@@ -167,7 +167,7 @@ export default function TagsTable({ theme }) {
           <div className="flex justify-end gap-3 mt-5">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm bg-gray-300 hover:bg-gray-400 dark:bg-neutral-700 dark:hover:bg-neutral-600"
+              className="px-4 py-2 rounded-lg text-sm border border-grey-400 bg-grey-400/10 text-grey-700 dark:border-grey-500 dark:bg-grey-500/20 dark:text-grey-300"
             >
               Cancel
             </button>

@@ -15,14 +15,14 @@ import { useConfirm } from "../../context/ConfirmContext";
 import SlotForm from "./SlotForm";
 import SlotCard from "./SlotCard";
 
-export default function ExpertSlots({ theme}) {
+export default function ExpertSlots({ theme }) {
   const isDark = theme === "dark";
   const { bg, card, border, input } = useThemeClasses(isDark);
   const dispatch = useDispatch();
   const { showAlert } = useAlert();
   const { showConfirm } = useConfirm();
 
-console.log("ExpertSlots theme:", theme, "isDark:", isDark);
+  console.log("ExpertSlots theme:", theme, "isDark:", isDark);
   /* ----------------------------
       REDUX STATE
   ----------------------------- */
@@ -41,12 +41,12 @@ console.log("ExpertSlots theme:", theme, "isDark:", isDark);
       FETCH SLOTS
   ----------------------------- */
   useEffect(() => {
-  if (!user) return;
-  if (!user.uuid) return;
-  if (user.user_type !== "expert") return;
+    if (!user) return;
+    if (!user.uuid) return;
+    if (user.user_type !== "expert") return;
 
-  dispatch(fetchExpertSlots(user.uuid));
-}, [user, dispatch]);
+    dispatch(fetchExpertSlots(user.uuid));
+  }, [user, dispatch]);
 
 
   /* ----------------------------
@@ -66,6 +66,8 @@ console.log("ExpertSlots theme:", theme, "isDark:", isDark);
 
       setShowModal(false);
       setEditingSlot(null);
+
+
     } catch (err) {
       if (typeof err === "object") {
         const msg =
@@ -83,26 +85,32 @@ console.log("ExpertSlots theme:", theme, "isDark:", isDark);
       DELETE SLOT
   ----------------------------- */
   const handleDelete = (slotUuid) => {
-  showConfirm({
-    title: "Delete Slot",
-    message: "Are you sure you want to delete this slot?",
-    confirmText: "Delete",
-    cancelText: "Cancel",
-    variant: "danger",
+    showConfirm({
+      title: "Delete Slot",
+      message: "Are you sure you want to delete this slot?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
 
-    onConfirm: async () => {
-      try {
-        await dispatch(deleteExpertSlot(slotUuid)).unwrap();
-        showAlert("Slot deleted successfully", "success");
-      } catch (err) {
-        showAlert(
-          typeof err === "string" ? err : "Delete failed",
-          "error"
-        );
-      }
-    },
-  });
-};
+      onConfirm: async () => {
+        try {
+          await dispatch(deleteExpertSlot(slotUuid)).unwrap();
+          showAlert("Slot deleted successfully", "success");
+        } catch (err) {
+          showAlert(
+            typeof err === "string" ? err : "Delete failed",
+            "error"
+          );
+        }
+      },
+    });
+  };
+
+  const sortedSlots = [...slots].sort(
+  (a, b) =>
+    new Date(a.start_datetime) - new Date(b.start_datetime)
+);
+
 
 
   /* ----------------------------
@@ -138,17 +146,19 @@ console.log("ExpertSlots theme:", theme, "isDark:", isDark);
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {slots.map((slot) => (
-            <SlotCard
-              key={slot.uuid}
-              slot={slot}
-              onEdit={() => {
-                setEditingSlot(slot);
-                setShowModal(true);
-              }}
-              onDelete={() => handleDelete(slot.uuid)}
-            />
-          ))}
+          {sortedSlots.map((slot) => (
+  <SlotCard
+    key={slot.uuid}
+    slot={slot}
+    isDark={isDark}
+    onEdit={() => {
+      setEditingSlot(slot);
+      setShowModal(true);
+    }}
+    onDelete={() => handleDelete(slot.uuid)}
+  />
+))}
+
         </div>
       )}
 
@@ -156,30 +166,30 @@ console.log("ExpertSlots theme:", theme, "isDark:", isDark);
           MODAL
       ======================= */}
       {showModal && (
-  <div
-    className="fixed inset-0 bg-black/50 flex justify-center items-center z-50"
-    onClick={() => {
-      setShowModal(false);
-      setEditingSlot(null);
-    }}
-  >
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className={`relative w-full max-w-xl mx-4 rounded-xl shadow-lg p-6
+        <div
+          className="fixed inset-0 bg-black/50 flex justify-center items-center z-50"
+          onClick={() => {
+            setShowModal(false);
+            setEditingSlot(null);
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`relative w-full max-w-xl mx-4 rounded-xl shadow-lg p-6
         max-h-[90vh] overflow-y-auto border ${bg} ${border}`}
-    >
-      <SlotForm
-        initialData={editingSlot}
-        onSave={handleSave}
-        onCancel={() => {
-          setShowModal(false);
-          setEditingSlot(null);
-        }}
-        isDark={isDark}   
-      />
-    </div>
-  </div>
-)}
+          >
+            <SlotForm
+              initialData={editingSlot}
+              onSave={handleSave}
+              onCancel={() => {
+                setShowModal(false);
+                setEditingSlot(null);
+              }}
+              isDark={isDark}
+            />
+          </div>
+        </div>
+      )}
 
 
     </div>

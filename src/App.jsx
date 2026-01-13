@@ -17,19 +17,24 @@ import EntrepreneurProfile from "./profiles/entrepreneur";
 import ExpertProfile from "./profiles/expertProfile";
 import Comments from "./components/posts/comment";
 import ExpertWizard from "./profiles/expertWizards/ExpertWizard";
-import EntrepreneurWizard from "./profiles/entreprenuerWizard/entreprenuerWizard";
+import EntrepreneurWizard from "./profiles/entreprenuerWizard/entreprenuerWizard"; 
+
 import AdminDashboard from "./admin/adminPages/adminDashboard";
 import AdminUsers from "./admin/adminPages/adminUsers";
 import AdminPosts from "./admin/adminPages/adminPosts";
 import SystemLogs from "./admin/superadminPages/systemLogs";
 import AdminLayout from "./admin/adminLayout";
+import AdminSubscriptions from "./admin/adminPages/adminSubscriptions";
 import AdminTags from "./admin/adminPages/adminTags";
+
 import ProfileFetcher from "./profiles/ProfileFetcher";
 import ExpertSlots from "./profiles/expertSlots/ExpertSlots";
 import BookSession from "./components/profileFetch/expertBooking/BookSession";
 import InvestorProfile from "./profiles/investorProfile";
 import Error from "./error";
 import PaymentPage from "./payment";
+import Subscription from "./components/subscription/Subscription";
+import MyBookings from "./components/myBookings/MyBookings";
 
 function App() {
   const dispatch = useDispatch();
@@ -149,13 +154,15 @@ function App() {
         <Route path="/expert" element={<ExpertProfile theme={theme} />} />
         {/* Booking */}
         <Route path="/expert/slots" element={<ExpertSlots theme={theme} />} />
-        <Route path="/book-session/:expertUuid" element={<BookSession />} />
+        <Route path="/book-session/:expertUuid" element={<BookSession theme={theme} />} />
 
         <Route path="/upgrade/entrepreneur" element={<EntrepreneurWizard theme={theme} />} />
 
         <Route path="/investor" element={<InvestorProfile theme={theme} />} />
 
         <Route path="/profile/:username" element={<ProfileFetcher theme={theme} />} />
+        <Route path="/subscription" element={<Subscription theme={theme} />} />
+        <Route path="/my-bookings" element={<MyBookings theme={theme} />} />
         <Route path="/payment" element={<PaymentPage theme={theme} />} />
 
 
@@ -170,6 +177,7 @@ function App() {
           <Route path="/adminUsers" element={<AdminUsers theme={theme} />} />
           <Route path="/adminPosts" element={<AdminPosts theme={theme} />} />
           <Route path="/system-logs" element={<SystemLogs theme={theme} />} />
+          <Route path="/subscriptions" element={<AdminSubscriptions theme={theme} />} />
 
         </Route>
 

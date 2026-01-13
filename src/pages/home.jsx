@@ -7,6 +7,7 @@ import { FaGraduationCap, FaUser } from "react-icons/fa";
 import { IoIosRocket } from "react-icons/io";
 import { FaEllipsisH } from "react-icons/fa";
 import { MdOutlineFileDownload } from "react-icons/md";
+import { FaBriefcase } from "react-icons/fa";
 
 import { useConfirm } from "../context/ConfirmContext";
 import { useAlert } from "../context/AlertContext";
@@ -207,6 +208,20 @@ function Home({ theme }) {
             <IoIosRocket className="mr-1" /> Entrepreneur
           </span>
         );
+      
+        case "investor":
+        return (
+          <span
+            className="
+            inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
+            border transition-all
+            border-red-400 bg-red-400/10 text-red-500
+            dark:border-red-500 dark:bg-red-500/20 dark:text-red-300
+          "
+          >
+            <FaBriefcase className="mr-1" /> Investor
+          </span>
+        );
 
       default:
         // Normal user
@@ -224,6 +239,7 @@ function Home({ theme }) {
         );
     }
   }
+
 
 
   // 🚨 ADMIN REDIRECT LOGIC — ONLY CHANGE YOU NEEDED
@@ -340,24 +356,43 @@ function Home({ theme }) {
         <main className="col-span-12 md:col-span-6 lg:col-span-7 space-y-3">
 
           {/* MOBILE TAGS LIST */}
-          <div className="md:hidden overflow-x-auto pb-2 flex gap-2 no-scrollbar" style={{ scrollbarWidth: "none" }}>
-            {loadingTags ? (
-              <p className="text-xs opacity-50 px-2">Loading tags...</p>
-            ) : (
-              Array.isArray(tags) && tags.map((tag) => (
-                <button
-                  key={tag.id}
-                  onClick={() => applySearch(tag.slug)}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-full border text-xs font-medium transition-all
+          <div className="md:hidden relative group">
+            <div
+              className="overflow-x-auto pb-2 flex gap-2 no-scrollbar pr-14"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {loadingTags ? (
+                <p className="text-xs opacity-50 px-2">Loading tags...</p>
+              ) : (
+                Array.isArray(tags) && tags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => applySearch(tag.slug)}
+                    className={`whitespace-nowrap px-3 py-1.5 rounded-full border text-xs font-medium transition-all shrink-0
                      ${searchQuery === tag.slug
-                      ? "bg-red-500 text-white border-red-500"
-                      : `${cardBg} ${borderColor} ${text} opacity-80`
-                    }
+                        ? "bg-red-500 text-white border-red-500"
+                        : `${cardBg} ${borderColor} ${text} opacity-80`
+                      }
                    `}
+                  >
+                    {tag.name}
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* CLEAR BUTTON (Mobile) */}
+            {searchQuery && (
+              <div
+                className={`absolute right-0 top-0 bottom-2 z-10 flex items-center pl-4  to-transparent `}
+              >
+                <button
+                  onClick={() => applySearch("")}
+                  className="text-white bg-red-500 text-[10px] font-bold px-3 py-2 rounded-full shadow-md"
                 >
-                  {tag.name}
+                  Clear
                 </button>
-              ))
+              </div>
             )}
           </div>
 
