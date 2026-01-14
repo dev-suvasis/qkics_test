@@ -1,44 +1,45 @@
-import { FaSignOutAlt } from "react-icons/fa";
+import { FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSun, faMoon } from "@fortawesome/free-solid-svg-icons";
+import { faSun, faMoon, faBars } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 
-export default function AdminNavbar({ theme, role, onToggleTheme }) {
+export default function AdminNavbar({ theme, role, onToggleTheme, toggleSidebar, isSidebarOpen }) {
   const isDark = theme === "dark";
   const navigate = useNavigate();
 
   return (
     <header
       className={`
-        px-6 py-4 flex items-center justify-between
-        shadow-md rounded-xl mx-4 mt-4
-        border backdrop-blur-md
+        sticky top-0 z-10
+        h-16 px-6 flex items-center justify-between
+        border-b backdrop-blur-md transition-all duration-300
         ${isDark
-          ? "bg-neutral-900/60 border-neutral-700 text-white"
-          : "bg-white/70 border-neutral-200 text-neutral-900"
+          ? "bg-neutral-900/80 border-neutral-800 text-white"
+          : "bg-white/80 border-neutral-200 text-neutral-900"
         }
       `}
     >
-      {/* LEFT — BRAND */}
-      <div
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={() => navigate("/admin")}
-      >
-        <img src="/logo.png" className="rounded h-10 w-10 shadow" alt="logo" />
+      <div className="flex items-center gap-4">
+        {/* SIDEBAR TOGGLE */}
+        <button
+          onClick={toggleSidebar}
+          className={`
+            p-2 rounded-lg transition-colors
+            ${isDark
+              ? "hover:bg-neutral-800 text-neutral-400"
+              : "hover:bg-neutral-100 text-neutral-500"
+            }
+          `}
+        >
+          <FaBars className={`text-xl transition-transform ${isSidebarOpen ? "rotate-90" : ""}`} />
+        </button>
 
-        <div className="text-xl font-bold tracking-wide">
-          Q-KICS Admin Panel
+        {/* BREADCRUMB OR TITILE - Optional but good for ERP */}
+        <div className="hidden md:block">
+          <h1 className="text-lg font-semibold capitalize">
+            {window.location.pathname.split("/").pop() || "Dashboard"}
+          </h1>
         </div>
-
-        {/* Role Badge */}
-        {/* <span className="
-          inline-flex items-center px-2 py-1 rounded-xl text-xs font-medium
-          border transition-all
-          border-orange-400 bg-orange-400/10 text-orange-500
-          dark:border-orange-500 dark:bg-orange-500/20 dark:text-orange-300
-        ">
-          {role}
-        </span> */}
       </div>
 
       {/* RIGHT SECTION */}

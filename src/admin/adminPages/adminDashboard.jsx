@@ -47,7 +47,7 @@ export default function AdminDashboard({ theme }) {
     <div className="p-6">
 
       {/* PAGE TITLE */}
-      <h1 className="text-2xl font-semibold mb-6 text-center">
+      <h1 className={`text-2xl font-bold mb-8 text-center transition-colors ${theme === "dark" ? "text-white" : "text-neutral-900"}`}>
         {role === "superadmin" ? "Super Admin Dashboard" : "Admin Dashboard"}
       </h1>
 

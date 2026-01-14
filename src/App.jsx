@@ -26,6 +26,7 @@ import SystemLogs from "./admin/superadminPages/systemLogs";
 import AdminLayout from "./admin/adminLayout";
 import AdminSubscriptions from "./admin/adminPages/adminSubscriptions";
 import AdminTags from "./admin/adminPages/adminTags";
+import AdminDocuments from "./admin/adminPages/adminDocuments";
 
 import ProfileFetcher from "./profiles/ProfileFetcher";
 import ExpertSlots from "./profiles/expertSlots/ExpertSlots";
@@ -146,15 +147,15 @@ function App() {
         <Route path="/logout" element={<Logout />} />
 
         {/* admin and superadmin routes  */}
-        <Route element={<AdminLayout onToggleTheme={toggleTheme} />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/superadmin" element={<AdminDashboard />} />
-          <Route path="/adminTags" element={<AdminTags />} />
-          <Route path="/adminUsers" element={<AdminUsers />} />
-          <Route path="/adminPosts" element={<AdminPosts />} />
-          <Route path="/system-logs" element={<SystemLogs />} />
-          <Route path="/subscriptions" element={<AdminSubscriptions />} />
-
+        <Route element={<AdminLayout theme={theme} role={user?.user_type} onToggleTheme={toggleTheme} />}>
+          <Route path="/admin" element={<AdminDashboard theme={theme} />} />
+          <Route path="/superadmin" element={<AdminDashboard theme={theme} />} />
+          <Route path="/admin-tags" element={<AdminTags theme={theme} />} />
+          <Route path="/admin-users" element={<AdminUsers theme={theme} />} />
+          <Route path="/admin-posts" element={<AdminPosts theme={theme} />} />
+          <Route path="/system-logs" element={<SystemLogs theme={theme} />} />
+          <Route path="/subscriptions" element={<AdminSubscriptions theme={theme} />} />
+          <Route path="/admin-documents" element={<AdminDocuments theme={theme} />} />
         </Route>
 
         {/* 404 Not Found */}
