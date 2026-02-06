@@ -10,20 +10,19 @@ import { useConfirm } from "../context/ConfirmContext";
 import { FaBriefcase } from "react-icons/fa";
 
 import { useDispatch, useSelector } from "react-redux";
-import { loadUserPosts, removePost } from "../redux/slices/postsSlice";
+import { loadUserPosts } from "../redux/slices/postsSlice";
 import { fetchUserProfile, setActiveProfileData, clearActiveProfileData } from "../redux/slices/userSlice";
 
 import UserDetails from "./basicDetails/userDetails";
 import UserPosts from "./basicDetails/userPosts";
-import InvestorDetails from "./investorDetails/investorDetails";
+import InvestorDetails from "./InvestorDetails/InvestorDetails";
 import ModalOverlay from "../components/ui/ModalOverlay";
 import UserBadge from "../components/ui/UserBadge";
 
 import { MdOutlineManageAccounts } from "react-icons/md";
 import { RiFundsLine } from "react-icons/ri";
 
-import useLike from "../components/hooks/useLike";
-import { getAccessToken } from "../redux/store/tokenManager";
+
 
 export default function InvestorProfile({
   profile: propProfile,

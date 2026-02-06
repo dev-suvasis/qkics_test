@@ -17,7 +17,7 @@ import EntrepreneurProfile from "./profiles/entrepreneur";
 import ExpertProfile from "./profiles/expertProfile";
 import Comments from "./components/posts/comment";
 import ExpertWizard from "./profiles/expertWizards/ExpertWizard";
-import EntrepreneurWizard from "./profiles/entreprenuerWizard/entreprenuerWizard";
+import EntrepreneurWizard from "./profiles/entreprenuerWizard/EntreprenuerWizard";
 
 import AdminDashboard from "./admin/adminPages/adminDashboard";
 import AdminUsers from "./admin/adminPages/adminUsers";

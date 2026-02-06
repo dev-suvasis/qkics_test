@@ -1,6 +1,6 @@
 import { useState } from "react";
-import AdminNavbar from "./adminComponents/AdminNavbar";
-import AdminSidebar from "./adminComponents/AdminSidebar";
+import AdminNavbar from "./adminComponents/adminNavbar";
+import AdminSidebar from "./adminComponents/adminSidebar";
 import { Outlet, Navigate } from "react-router-dom";
 
 export default function AdminLayout({ user, status, theme, role, onToggleTheme }) {
