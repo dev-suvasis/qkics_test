@@ -14,8 +14,8 @@ import useTags from "../components/hooks/useTags";
 import { getAccessToken } from "../redux/store/tokenManager";
 
 import CreatePostModal from "../components/posts/create_post";
-import LoginModal from "../components/auth/Login";
-import SignupModal from "../components/auth/Signup";
+import LoginModal from "../components/auth/login";
+import SignupModal from "../components/auth/signup";
 import ModalOverlay from "../components/ui/ModalOverlay";
 import PostCard from "../components/posts/PostCard";
 
