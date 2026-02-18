@@ -114,6 +114,15 @@ const userSlice = createSlice({
     clearActiveProfileData: (state) => {
       state.activeProfileData = null;
     },
+
+    // Call this immediately after a successful profile picture upload.
+    // Directly patches state.user.data so the navbar updates instantly
+    // without waiting for a second /auth/me/ round-trip.
+    updateProfilePicture: (state, action) => {
+      if (state.data) {
+        state.data.profile_picture = action.payload;
+      }
+    },
   },
 
   extraReducers: (builder) => {
@@ -179,5 +188,6 @@ export const {
   setTheme,
   setActiveProfileData,
   clearActiveProfileData,
+  updateProfilePicture,
 } = userSlice.actions;
 export default userSlice.reducer;

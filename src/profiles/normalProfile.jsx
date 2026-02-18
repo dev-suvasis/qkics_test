@@ -20,7 +20,9 @@ import {
   fetchUserProfile,
   setActiveProfileData,
   clearActiveProfileData,
+  updateProfilePicture,
 } from "../redux/slices/userSlice";
+import { resolveMedia } from "../components/utils/mediaUrl";
 
 
 // UI Components
@@ -178,12 +180,12 @@ export default function NormalProfile({
 
       const updatedUser = res.data.user;
       setProfileUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // ✅ SYNC ACTIVE PROFILE DATA
+      // Sync active profile so the profile page re-renders immediately
       dispatch(setActiveProfileData({ role: "normal", profile: updatedUser }));
 
-      dispatch(fetchUserProfile());
+      // ✅ Instantly update navbar profile pic — no second API call needed
+      dispatch(updateProfilePicture(updatedUser.profile_picture));
 
       showAlert("Profile picture updated!", "success");
     } catch (err) {
@@ -265,7 +267,7 @@ export default function NormalProfile({
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-transparent group-hover:ring-red-500/20 transition-all duration-700">
                 {profileUser.profile_picture ? (
                   <img
-                    src={`${profileUser.profile_picture}?t=${Date.now()}`}
+                    src={`${resolveMedia(profileUser.profile_picture)}?t=${Date.now()}`}
                     alt="Profile"
                     className="w-full h-full object-cover transform md:group-hover:scale-110 transition-transform duration-700 cursor-pointer"
                     onClick={() => setShowImageModal(true)}
@@ -386,8 +388,7 @@ export default function NormalProfile({
               </svg>
             </button>
             <img
-              src={`${profileUser.profile_picture}?t=${Date.now()}`}
-              alt="Profile Large"
+              src={`${resolveMedia(profileUser.profile_picture)}?t=${Date.now()}`}
               className="w-80 h-80 md:w-96 md:h-96 rounded-2xl object-cover shadow-2xl ring-4 ring-white/10"
               onClick={(e) => e.stopPropagation()}
             />

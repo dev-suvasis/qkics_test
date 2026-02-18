@@ -4,6 +4,7 @@ import { FaEllipsisH } from "react-icons/fa";
 import { HiPencilAlt, HiTrash } from "react-icons/hi";
 import UserBadge from "../ui/UserBadge";
 import useClickOutside from "../hooks/useClickOutside";
+import { resolveAvatar } from "../utils/mediaUrl";
 
 const timeAgo = (dateString) => {
     const now = new Date();
@@ -56,9 +57,10 @@ export default function PostCard({
                         onClick={() => onProfileClick?.(post.author)}
                     >
                         <img
-                            src={post.author.profile_picture || `https://ui-avatars.com/api/?name=${post.author.username}&background=random`}
+                            src={resolveAvatar(post.author.profile_picture, post.author.username)}
                             className="h-full w-full object-cover"
                             alt="profile"
+                            loading="lazy"
                         />
                     </div>
 

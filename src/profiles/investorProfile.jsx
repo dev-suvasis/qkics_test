@@ -11,7 +11,8 @@ import { FaBriefcase } from "react-icons/fa";
 
 import { useDispatch, useSelector } from "react-redux";
 import { loadUserPosts } from "../redux/slices/postsSlice";
-import { fetchUserProfile, setActiveProfileData, clearActiveProfileData } from "../redux/slices/userSlice";
+import { fetchUserProfile, setActiveProfileData, clearActiveProfileData, updateProfilePicture } from "../redux/slices/userSlice";
+import { resolveMedia } from "../components/utils/mediaUrl";
 
 import UserDetails from "./basicDetails/userDetails";
 import UserPosts from "./basicDetails/userPosts";
@@ -179,10 +180,11 @@ export default function InvestorProfile({
       };
       setInvestorData(updated);
 
-      // ✅ SYNC ACTIVE PROFILE DATA
       dispatch(setActiveProfileData({ role: "investor", profile: updated }));
 
-      dispatch(fetchUserProfile());
+      // ✅ Instantly update navbar profile pic
+      dispatch(updateProfilePicture(res.data.user.profile_picture));
+
       showAlert("Profile picture updated!", "success");
     } catch (error) {
       console.error(error);
@@ -275,7 +277,7 @@ export default function InvestorProfile({
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden shadow-2xl ring-4 ring-transparent group-hover:ring-red-500/20 transition-all duration-700">
                 {user.profile_picture ? (
                   <img
-                    src={`${user.profile_picture}?t=${Date.now()}`}
+                    src={`${resolveMedia(user.profile_picture)}?t=${Date.now()}`}
                     className="w-full h-full object-cover transform md:group-hover:scale-110 transition-transform duration-700 cursor-pointer"
                     onClick={() => setShowImageModal(true)}
                   />
@@ -410,7 +412,7 @@ export default function InvestorProfile({
               </svg>
             </button>
             <img
-              src={`${user.profile_picture}?t=${Date.now()}`}
+              src={`${resolveMedia(user.profile_picture)}?t=${Date.now()}`}
               alt="Profile Large"
               className="w-80 h-80 md:w-96 md:h-96 rounded-2xl object-cover shadow-2xl ring-4 ring-white/10"
               onClick={(e) => e.stopPropagation()}

@@ -15,6 +15,7 @@ import MobileBottomNav from "./ui/MobileBottomNav";
 import ModalOverlay from "./ui/ModalOverlay";
 import useClickOutside from "./hooks/useClickOutside";
 import { getOwnProfileRoute } from "./utils/getUserProfileRoute";
+import { resolveAvatar } from "./utils/mediaUrl";
 
 import {
   faHouse,
@@ -222,7 +223,7 @@ function Navbar({ theme, onToggleTheme, user }) {
                       }`}
                   >
                     <img
-                      src={user?.profile_picture || `https://ui-avatars.com/api/?name=${user?.username}&background=random`}
+                      src={resolveAvatar(user?.profile_picture, user?.username)}
                       alt="profile"
                       className="h-full w-full object-cover"
                     />
