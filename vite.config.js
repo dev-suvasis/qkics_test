@@ -7,17 +7,17 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "https://qkicsbackend.matchb.online",
+        target: "{{import.meta.env.VITE_API_URL}}",
         changeOrigin: true,
         secure: false,
       },
       "/media": {
-        target: "https://qkicsbackend.matchb.online",
+        target: "{{import.meta.env.VITE_API_URL}}",
         changeOrigin: true,
         secure: false,
       },
       "/ws": {
-        target: "https://qkicsbackend.matchb.online",
+        target: "{{import.meta.env.VITE_API_URL}}",
         ws: true,                 // 🔥 THIS IS THE KEY
         changeOrigin: true,
         secure: false,

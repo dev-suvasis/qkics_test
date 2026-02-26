@@ -1,7 +1,7 @@
 // src/redux/slices/userSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosSecure from "../../components/utils/axiosSecure";
-import { setAccessToken } from "../store/tokenManager";
+import { setAccessToken, setRefreshToken, clearAllTokens } from "../store/tokenManager";
 
 /* =====================================
    INIT: Restore UUID from localStorage
@@ -12,7 +12,7 @@ const storedUuid = localStorage.getItem("user_uuid");
    THUNKS
 ===================================== */
 
-// 1️⃣ Fetch logged-in user profile (partial data, NO uuid)
+// 1️⃣ Fetch logged-in user profile
 export const fetchUserProfile = createAsyncThunk(
   "user/fetchProfile",
   async (_, { rejectWithValue }) => {
@@ -20,14 +20,12 @@ export const fetchUserProfile = createAsyncThunk(
       const res = await axiosSecure.get("/v1/auth/me/");
       return res.data;
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data || "Failed to fetch profile"
-      );
+      return rejectWithValue(err.response?.data || "Failed to fetch profile");
     }
   }
 );
 
-// 2️⃣ Login (FULL user object incl. uuid)
+// 2️⃣ Login — saves both tokens from the response body
 export const loginUser = createAsyncThunk(
   "user/login",
   async (credentials, { rejectWithValue }) => {
@@ -36,14 +34,18 @@ export const loginUser = createAsyncThunk(
       const data = res?.data ?? res;
 
       const accessToken = data?.access;
+      const refreshToken = data?.refresh;
       const user = data?.user;
 
       if (!accessToken || !user) {
         throw new Error("Invalid login response");
       }
 
-      setAccessToken(accessToken); // memory-only token
-      return user; // contains uuid
+      // ✅ Store both tokens — access in sessionStorage, refresh in cookie
+      setAccessToken(accessToken);
+      if (refreshToken) setRefreshToken(refreshToken);
+
+      return user;
     } catch (err) {
       return rejectWithValue(
         err?.response?.data || err.message || "Login failed"
@@ -60,9 +62,7 @@ export const updateUserProfile = createAsyncThunk(
       const res = await axiosSecure.patch("/v1/auth/me/update/", payload);
       return res.data.user;
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data || "Profile update failed"
-      );
+      return rejectWithValue(err.response?.data || "Profile update failed");
     }
   }
 );
@@ -75,16 +75,16 @@ const userSlice = createSlice({
   name: "user",
 
   initialState: {
-    // ✅ Restore uuid immediately if available
     data: storedUuid ? { uuid: storedUuid } : null,
     role: null,
-    status: "idle", // idle | loading | success | error
+    status: "idle",
     error: null,
-    // ✅ UI / Theme state
-    theme: localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
-    // ✅ Profile viewer state
+    theme:
+      localStorage.getItem("theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"),
     activeProfileData: null,
-    // ✅ Increments on every profile picture upload — use as cache buster in img src
     picVersion: 0,
   },
 
@@ -92,12 +92,10 @@ const userSlice = createSlice({
     logoutUser: (state) => {
       state.data = null;
       state.role = null;
-      state.status = "error";
+      state.status = "idle";
       state.error = null;
-
-      // ✅ Clear persisted identity
-      localStorage.removeItem("user_uuid");
-      setAccessToken(null);
+      // ✅ Clear all tokens + persisted uuid in one call
+      clearAllTokens();
     },
 
     setUserRole: (state, action) => {
@@ -117,9 +115,6 @@ const userSlice = createSlice({
       state.activeProfileData = null;
     },
 
-    // Call this immediately after a successful profile picture upload.
-    // Directly patches state.user.data so the navbar updates instantly
-    // without waiting for a second /auth/me/ round-trip.
     updateProfilePicture: (state, action) => {
       if (state.data) {
         state.data.profile_picture = action.payload;
@@ -130,33 +125,20 @@ const userSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-
       /* -------- FETCH PROFILE -------- */
       .addCase(fetchUserProfile.pending, (state) => {
         state.status = "loading";
       })
       .addCase(fetchUserProfile.fulfilled, (state, action) => {
         state.status = "success";
-
-        // ✅ MERGE (never overwrite uuid)
-        state.data = {
-          ...state.data,
-          ...action.payload,
-        };
-
+        state.data = { ...state.data, ...action.payload };
         state.role = action.payload.role || state.role;
         state.error = null;
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
-        // ✅ Do NOT wipe state.data here.
-        // On page refresh the access token is gone from memory. If silentRefresh
-        // fails (expired cookie), fetchUserProfile will 401 — but that does NOT
-        // mean the user chose to log out. Only explicit logoutUser() clears data.
         state.status = "idle";
         state.error =
-          action.payload ||
-          action.error?.message ||
-          "Failed to fetch profile";
+          action.payload || action.error?.message || "Failed to fetch profile";
       })
 
       /* -------- LOGIN -------- */
@@ -165,8 +147,6 @@ const userSlice = createSlice({
         state.data = action.payload;
         state.role = action.payload.role || null;
         state.error = null;
-
-        // ✅ Persist uuid safely
         if (action.payload?.uuid) {
           localStorage.setItem("user_uuid", action.payload.uuid);
         }
@@ -179,10 +159,7 @@ const userSlice = createSlice({
 
       /* -------- PROFILE UPDATE -------- */
       .addCase(updateUserProfile.fulfilled, (state, action) => {
-        state.data = {
-          ...state.data,
-          ...action.payload,
-        };
+        state.data = { ...state.data, ...action.payload };
       });
   },
 });
@@ -195,4 +172,5 @@ export const {
   clearActiveProfileData,
   updateProfilePicture,
 } = userSlice.actions;
+
 export default userSlice.reducer;

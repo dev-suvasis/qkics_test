@@ -103,25 +103,27 @@ function MobileBottomNav({ theme, isLoggedIn, setShowLogin, onAction }) {
                 </div>
 
                 {/* NOTIFICATIONS */}
-                <button
-                    onClick={() => handleAuthNavigation("/notifications")}
-                    className="flex-1 h-full relative"
-                >
-                    <div className={getNavClass("/notifications")}>
-                        <div className="relative">
-                            <FaBell size={22} className={location.pathname === "/notifications" ? "scale-110" : ""} />
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white shadow-md">
-                                    {unreadCount > 9 ? "9+" : unreadCount}
-                                </span>
+                {isLoggedIn && (
+                    <button
+                        onClick={() => navigate("/notifications")}
+                        className="flex-1 h-full relative"
+                    >
+                        <div className={getNavClass("/notifications")}>
+                            <div className="relative">
+                                <FaBell size={22} className={location.pathname === "/notifications" ? "scale-110" : ""} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white shadow-md">
+                                        {unreadCount > 9 ? "9+" : unreadCount}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-[8px] font-black uppercase tracking-[0.1em]">Alerts</span>
+                            {location.pathname === "/notifications" && (
+                                <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-red-600" />
                             )}
                         </div>
-                        <span className="text-[8px] font-black uppercase tracking-[0.1em]">Alerts</span>
-                        {location.pathname === "/notifications" && (
-                            <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-red-600" />
-                        )}
-                    </div>
-                </button>
+                    </button>
+                )}
 
                 {/* DOCUMENTS */}
                 <button

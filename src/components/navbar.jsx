@@ -268,18 +268,20 @@ function Navbar({ theme, onToggleTheme, user }) {
                 <span>Premium</span>
               </button>
 
-              <button
-                onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/notifications")}
-                className={`${getNavClass("/notifications")} relative`}
-                title="Notifications"
-              >
-                <MdNotificationsActive size={22} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-md">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </button>
+              {isLoggedIn && (
+                <button
+                  onClick={() => navigate("/notifications")}
+                  className={`${getNavClass("/notifications")} relative`}
+                  title="Notifications"
+                >
+                  <MdNotificationsActive size={22} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-md">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
               {/* THEME TOGGLE */}
               <button

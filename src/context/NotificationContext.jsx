@@ -46,25 +46,25 @@ export const NotificationProvider = ({ children }) => {
         }
     };
 
-    useEffect(() => {
-        let intervalId;
-        if (user) {
-            fetchNotifications();
+    // useEffect(() => {
+    //     let intervalId;
+    //     if (user) {
+    //         fetchNotifications();
 
-            // Poll for notifications every 10 seconds in the background
-            intervalId = setInterval(() => {
-                fetchNotifications(false, true);
-            }, 10000);
-        } else {
-            setNotifications([]);
-            setUnreadCount(0);
-            setTotalCount(0);
-        }
+    //         // Poll for notifications every 10 seconds in the background
+    //         intervalId = setInterval(() => {
+    //             fetchNotifications(false, true);
+    //         }, 10000);
+    //     } else {
+    //         setNotifications([]);
+    //         setUnreadCount(0);
+    //         setTotalCount(0);
+    //     }
 
-        return () => {
-            if (intervalId) clearInterval(intervalId);
-        };
-    }, [user]);
+    //     return () => {
+    //         if (intervalId) clearInterval(intervalId);
+    //     };
+    // }, [user]);
 
     const markAsRead = async (id, isAlreadyRead) => {
         if (isAlreadyRead) return;
