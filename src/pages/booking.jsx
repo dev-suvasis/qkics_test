@@ -20,15 +20,20 @@ export default function Booking() {
   const [next, setNext] = useState(null);
   const loaderRef = useRef(null);
 
-  useEffect(() => {
-    fetchExperts();
-  }, []);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchExperts = async () => {
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchExperts(searchQuery);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const fetchExperts = async (query = "") => {
     try {
       setLoading(true);
       setError("");
-      const res = await axiosSecure.get("/v1/experts/");
+      const res = await axiosSecure.get(`/v1/experts/?search=${encodeURIComponent(query)}`);
       const data = res.data;
       setItems(Array.isArray(data) ? data : (data?.results || []));
       setNext(data?.next || null);
@@ -99,6 +104,18 @@ export default function Booking() {
           <p className="opacity-50 font-medium max-w-xl leading-relaxed">
             Connect with verified experts in the global QKICS community.
           </p>
+        </div>
+        <div className="w-full md:w-auto">
+          <input
+            type="text"
+            placeholder="Search Professionals..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full md:w-80 px-5 py-3 rounded-full text-sm font-bold border transition-all ${isDark
+                ? "bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-red-500 hover:bg-white/10"
+                : "bg-black/5 border-black/10 text-black placeholder:text-black/30 focus:border-red-500 hover:bg-black/10"
+              } outline-none`}
+          />
         </div>
       </div>
 

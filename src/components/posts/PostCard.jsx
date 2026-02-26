@@ -130,13 +130,13 @@ export default function PostCard({
             {/* CONTENT */}
             <div className={`px-6 pb-6 ${text}`}>
                 {post.title && (
-                    <h2 className="text-xl font-extrabold mb-1 leading-tight tracking-tight">
+                    <h2 className="text-lg font-bold mb-1 leading-tight tracking-tight">
                         {post.title}
                     </h2>
                 )}
 
                 <div className="relative">
-                    <p className={`text-[15px] leading-relaxed opacity-80 font-medium ${!expanded && post.content.length > 200 ? "line-clamp-3" : ""}`}>
+                    <p className={`text-sm leading-relaxed opacity-80 font-medium ${!expanded && post.content.length > 200 ? "line-clamp-3" : ""}`}>
                         {post.content}
                     </p>
 

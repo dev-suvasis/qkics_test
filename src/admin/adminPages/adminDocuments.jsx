@@ -3,6 +3,7 @@ import axiosSecure from "../../components/utils/axiosSecure";
 import { FaEdit, FaEye, FaSearch, FaFilter, FaPlus, FaFileAlt } from "react-icons/fa";
 import { MdToggleOn, MdToggleOff } from "react-icons/md";
 import DocumentFormModal from "../adminComponents/DocumentFormModal";
+import DocumentSettingsModal from "../adminComponents/DocumentSettingsModal";
 
 export default function AdminDocuments({ theme }) {
   const isDark = theme === "dark";
@@ -14,6 +15,9 @@ export default function AdminDocuments({ theme }) {
   const [searchText, setSearchText] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+
+  const [settings, setSettings] = useState(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   /* ================= FETCH DOCUMENTS ================= */
   const fetchDocuments = async () => {
@@ -30,8 +34,18 @@ export default function AdminDocuments({ theme }) {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const res = await axiosSecure.get("/v1/documents/admin/settings/");
+      setSettings(res.data);
+    } catch (err) {
+      console.error("Failed to fetch settings", err);
+    }
+  };
+
   useEffect(() => {
     fetchDocuments();
+    fetchSettings();
   }, []);
 
   /* ================= SEARCH FILTER ================= */
@@ -78,6 +92,33 @@ export default function AdminDocuments({ theme }) {
           <FaPlus /> Upload Document
         </button>
       </div>
+
+      {/* Settings Area */}
+      {settings && (
+        <div className={`p-6 rounded-xl border sm:flex-row flex flex-col justify-between items-center gap-4 ${isDark ? "bg-[#111111] border-gray-800" : "bg-white border-gray-200 shadow-sm"}`}>
+          <div className="flex flex-wrap gap-8">
+            <div className="flex flex-col">
+              <span className={`text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? "text-gray-500" : "text-gray-500"}`}>Upload Limit</span>
+              <span className={`text-2xl font-black ${isDark ? "text-blue-400" : "text-blue-600"}`}>{settings.monthly_upload_limit} <span className="text-sm font-medium opacity-50">/ month</span></span>
+            </div>
+            <div className="flex flex-col">
+              <span className={`text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? "text-gray-500" : "text-gray-500"}`}>Download Limit</span>
+              <span className={`text-2xl font-black ${isDark ? "text-blue-400" : "text-blue-600"}`}>{settings.monthly_download_limit} <span className="text-sm font-medium opacity-50">/ month</span></span>
+            </div>
+            <div className="flex flex-col justify-center">
+              <span className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${isDark ? "text-gray-600" : "text-gray-400"}`}>Last Updated</span>
+              <span className={`text-xs font-medium ${isDark ? "text-gray-400" : "text-gray-600"}`}>{new Date(settings.updated_at).toLocaleString()}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-sm rounded-lg transition-colors border ${isDark ? "border-gray-700 hover:bg-gray-800 text-gray-200" : "border-gray-300 hover:bg-gray-50 text-gray-700"
+              }`}
+          >
+            <FaEdit /> Edit Settings
+          </button>
+        </div>
+      )}
 
       {/* Filters Area */}
       <div className={`p-4 rounded-xl border flex flex-col sm:flex-row gap-4 justify-between items-center ${isDark ? "bg-[#111111] border-gray-800" : "bg-white border-gray-200 shadow-sm"}`}>
@@ -126,8 +167,8 @@ export default function AdminDocuments({ theme }) {
                     </td>
                     <td className="py-3 px-5 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[0.7rem] font-medium ${doc.is_active
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
                         }`}>
                         {doc.is_active ? "Active" : "Inactive"}
                       </span>
@@ -196,6 +237,14 @@ export default function AdminDocuments({ theme }) {
           isDark={isDark}
         />
       )}
+
+      <DocumentSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        settings={settings}
+        onSuccess={fetchSettings}
+        isDark={isDark}
+      />
     </div>
   );
 }

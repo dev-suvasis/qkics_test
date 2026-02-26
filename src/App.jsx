@@ -1,10 +1,11 @@
 import { useEffect, useState, lazy, Suspense } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useAlert } from "./context/AlertContext";
 
 import { fetchUserProfile, setTheme } from "./redux/slices/userSlice";
 import { silentRefresh } from "./components/utils/axiosSecure";
+import { setNavigate } from "./components/utils/navigation";
 import ServerDown from "./components/Serverdown";
 
 import Navbar from "./components/navbar";
@@ -62,6 +63,12 @@ function PageLoader() {
 function App() {
   const dispatch = useDispatch();
   const { showAlert } = useAlert();
+  const navigate = useNavigate();
+  const [isErrorPage, setIsErrorPage] = useState(false);
+
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
 
   const { data: user, status, theme } = useSelector((state) => state.user);
 
@@ -111,27 +118,29 @@ function App() {
     // ✅ Only hide navbar during the initial loading splash.
     // "idle" is now the resting state for logged-out users — don't hide on it.
     if (status === "loading") return false;
+    if (isErrorPage) return false;
     if (
       location.pathname.startsWith("/admin") ||
       location.pathname.startsWith("/superadmin") ||
       location.pathname.startsWith("/system-logs") ||
-      location.pathname.startsWith("/subscriptions")
+      location.pathname.startsWith("/subscriptions") ||
+      location.pathname === "/server-down"
     ) return false;
     return true;
   };
 
   return (
     <>
-      {shouldShowNavbar() && (
-        <Navbar
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          user={user}
-          onSearch={(text) => setSearchText(text)}
-        />
-      )}
-
       <ErrorBoundary>
+        {shouldShowNavbar() && (
+          <Navbar
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            user={user}
+            onSearch={(text) => setSearchText(text)}
+          />
+        )}
+
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -184,7 +193,7 @@ function App() {
               <Route path="/admin-application/entrepreneur" element={<AdminEntrepreneurApplications theme={theme} />} />
             </Route>
 
-            <Route path="*" element={<Error />} />
+            <Route path="*" element={<Error setIsErrorPage={setIsErrorPage} />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>

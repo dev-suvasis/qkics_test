@@ -33,7 +33,8 @@ export default function Subscription() {
             // Assuming public endpoint. If fails, we might need to adjust based on backend routes.
             // Admin uses /v1/subscriptions/admin/plans/
             const res = await axiosSecure.get("/v1/subscriptions/plans/");
-            setPlans(res.data.results || []);
+            const data = res.data;
+            setPlans(Array.isArray(data) ? data : (data?.results || []));
         } catch (err) {
             console.error("Failed to load plans", err);
             // Fallback or empty state handled in UI

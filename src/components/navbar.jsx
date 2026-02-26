@@ -3,12 +3,12 @@ import { useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { FaHome, FaUser, FaKey, FaSignOutAlt, FaSearch, FaTimes, FaFileAlt, FaAddressBook, FaBars, FaHandshake } from "react-icons/fa";
+import { FaHome, FaUser, FaKey, FaSignOutAlt, FaSearch, FaTimes, FaFileAlt, FaAddressBook, FaBars, FaHandshake, FaBuilding, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { FaUsersGear, FaCrown } from "react-icons/fa6";
 import { IoChatboxEllipses } from "react-icons/io5";
 import { MdNotificationsActive } from "react-icons/md";
 
-import LoginModal from "./auth/login";
+import LoginModal from "./auth/Login";
 import SignupModal from "./auth/Signup";
 import ChangePasswordModal from "./auth/change_password";
 import CreatePostModal from "./posts/create_post";
@@ -17,6 +17,7 @@ import ModalOverlay from "./ui/ModalOverlay";
 import useClickOutside from "./hooks/useClickOutside";
 import { getOwnProfileRoute } from "./utils/getUserProfileRoute";
 import { resolveAvatar } from "./utils/mediaUrl";
+import { useNotifications } from "../context/NotificationContext";
 
 import {
   faHouse,
@@ -29,6 +30,7 @@ function Navbar({ theme, onToggleTheme, user }) {
   const isDark = theme === "dark";
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount } = useNotifications();
 
   const getNavClass = (path) => {
     const isActive = location.pathname === path;
@@ -58,6 +60,7 @@ function Navbar({ theme, onToggleTheme, user }) {
 
   const [searchMobile, setSearchMobile] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [entDropdown, setEntDropdown] = useState(false);
   const searchInputRef = useRef(null);
   const desktopSearchRef = useRef(null);
 
@@ -112,33 +115,65 @@ function Navbar({ theme, onToggleTheme, user }) {
           </Link>
 
           {/* MIDDLE: NAVIGATION (Desktop) */}
-          <nav className={`hidden lg:flex items-center p-1.5 rounded-3xl border backdrop-blur-md transition-all duration-300 ${isDark ? "bg-neutral-900/50 border-white/5" : "bg-neutral-100/50 border-black/5"}`}>
+          <nav className={`hidden lg:flex items-center gap-3 p-1.5 rounded-3xl border backdrop-blur-md transition-all duration-300 ${isDark ? "bg-neutral-900/50 border-white/5" : "bg-neutral-100/50 border-black/5"}`}>
             <Link to="/">
               <button className={getNavClass("/")}
                 title="Home"
               >
-                <FaHome className="text-sm mb-0.5" />
-                {!isSearchExpanded && <span className="animate-fadeIn">Home</span>}
+                {isSearchExpanded && <FaHome className="text-sm animate-fadeIn" />}
+                {!isSearchExpanded && <span className="text-xs animate-fadeIn">Home</span>}
               </button>
             </Link>
 
             <button
               onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/booking")}
               className={getNavClass("/booking")}
-              title="Network"
+              title="Experts"
             >
-              <FaUsersGear className="text-sm mb-0.5" />
-              {!isSearchExpanded && <span className="animate-fadeIn">Experts</span>}
+              {isSearchExpanded && <FaUsersGear className="text-sm animate-fadeIn" />}
+              {!isSearchExpanded && <span className="text-xs animate-fadeIn">Experts</span>}
             </button>
 
-            <button
-              onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/entrepreneur-connect")}
-              className={getNavClass("/entrepreneur-connect")}
-              title="Entrepreneur Connect"
+            <div
+              className="relative h-full flex flex-col justify-center"
+              onMouseEnter={() => setEntDropdown(true)}
+              onMouseLeave={() => setEntDropdown(false)}
             >
-              <FaHandshake className="text-sm mb-0.5" />
-              {!isSearchExpanded && <span className="animate-fadeIn">Entreprenuer Connect</span>}
-            </button>
+              <button
+                // onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/entrepreneur-connect")}
+                className={getNavClass("/entrepreneur-connect")}
+                title="Entrepreneurial Connect"
+              >
+                {isSearchExpanded && <FaHandshake className="text-xs animate-fadeIn" />}
+                {!isSearchExpanded && (
+                  <span className="text-xs animate-fadeIn flex items-center gap-2">
+                    ENTREPRENEURIAL CONNECT
+                    {entDropdown ? <FaChevronUp className="text-[10px]" /> : <FaChevronDown className="text-[10px]" />}
+                  </span>
+                )}
+              </button>
+
+              {entDropdown && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 w-[750px] z-50 animate-fadeInOut">
+                  <div className={`rounded-3xl shadow-2xl border p-6 flex gap-8 ${isDark ? "bg-neutral-900 border-neutral-800 shadow-black/80" : "bg-white border-black/5 shadow-xl"}`}>
+                    <div className="flex-1 flex flex-col pt-1">
+                      <h3 className={`text-sm font-black uppercase tracking-[0.2em] mb-4 text-red-600 ml-2`}>Knowledge Hub</h3>
+                      <div className="space-y-1">
+                        <button onClick={() => { if (!isLoggedIn) setShowLogin(true); else { navigate("/"); setEntDropdown(false); } }} className={`w-full text-left block px-4 py-3.5 rounded-2xl text-xs font-bold transition-all duration-300 uppercase tracking-widest ${isDark ? "text-neutral-400 hover:text-white hover:bg-neutral-800" : "text-neutral-500 hover:text-black hover:bg-neutral-100"}`}>Researched Based Feed</button>
+                        <button onClick={() => { if (!isLoggedIn) setShowLogin(true); else { navigate("/document"); setEntDropdown(false); } }} className={`w-full text-left block px-4 py-3.5 rounded-2xl text-xs font-bold transition-all duration-300 uppercase tracking-widest ${isDark ? "text-neutral-400 hover:text-white hover:bg-neutral-800" : "text-neutral-500 hover:text-black hover:bg-neutral-100"}`}>Documents</button>
+                      </div>
+                    </div>
+                    <div className={`w-px ${isDark ? "bg-white/5" : "bg-black/5"}`}></div>
+                    <div className="flex-1 flex flex-col pt-1">
+                      <h3 className={`text-sm font-black uppercase tracking-[0.2em] mb-4 text-red-600 ml-2`}>Investor Linkups</h3>
+                      <div className="space-y-1">
+                        <button onClick={() => { if (!isLoggedIn) setShowLogin(true); else { navigate("/entrepreneur-connect"); setEntDropdown(false); } }} className={`w-full text-left block px-4 py-3.5 rounded-2xl text-xs font-bold transition-all duration-300 uppercase tracking-widest ${isDark ? "text-neutral-400 hover:text-white hover:bg-neutral-800" : "text-neutral-500 hover:text-black hover:bg-neutral-100"}`}>Investors</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* <button
               onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/notifications")}
@@ -154,8 +189,17 @@ function Navbar({ theme, onToggleTheme, user }) {
               className={getNavClass("/document")}
               title="Documents"
             >
-              <FaFileAlt className="text-sm mb-0.5" />
-              {!isSearchExpanded && <span className="animate-fadeIn">Documents</span>}
+              {isSearchExpanded && <FaFileAlt className="text-sm animate-fadeIn" />}
+              {!isSearchExpanded && <span className="text-xs animate-fadeIn">Documents</span>}
+            </button>
+
+            <button
+              onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/msmd")}
+              className={getNavClass("/mvlksdam")}
+              title="Company"
+            >
+              {isSearchExpanded && <FaBuilding className="text-sm animate-fadeIn" />}
+              {!isSearchExpanded && <span className="text-xs animate-fadeIn">Company</span>}
             </button>
           </nav>
 
@@ -227,11 +271,15 @@ function Navbar({ theme, onToggleTheme, user }) {
 
               <button
                 onClick={() => !isLoggedIn ? setShowLogin(true) : navigate("/notifications")}
-                className={getNavClass("/notifications")}
+                className={`${getNavClass("/notifications")} relative`}
                 title="Notifications"
               >
                 <MdNotificationsActive size={22} />
-                {/* <span>Alerts</span> */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-md">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               {/* THEME TOGGLE */}

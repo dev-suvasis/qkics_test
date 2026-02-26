@@ -124,6 +124,7 @@ export default function DocumentFormModal({ document, onClose, onSuccess, isDark
             >
               <option value="FREE">FREE</option>
               <option value="PREMIUM">PREMIUM</option>
+              {/* <option value="PAID">PAID</option> */}
             </select>
           </div>
 

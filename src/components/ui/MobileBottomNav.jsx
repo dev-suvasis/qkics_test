@@ -3,12 +3,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaHome, FaPlus, FaBell, FaFileAlt, FaHandshake } from "react-icons/fa";
 import { FaUsersGear } from "react-icons/fa6";
 import { useSelector } from "react-redux";
+import { useNotifications } from "../../context/NotificationContext";
 
 function MobileBottomNav({ theme, isLoggedIn, setShowLogin, onAction }) {
     const isDark = theme === "dark";
     const location = useLocation();
     const navigate = useNavigate();
     const { data: user } = useSelector((state) => state.user);
+    const { unreadCount } = useNotifications();
 
     const getNavClass = (path) => {
         const isActive = location.pathname === path;
@@ -103,10 +105,17 @@ function MobileBottomNav({ theme, isLoggedIn, setShowLogin, onAction }) {
                 {/* NOTIFICATIONS */}
                 <button
                     onClick={() => handleAuthNavigation("/notifications")}
-                    className="flex-1 h-full"
+                    className="flex-1 h-full relative"
                 >
                     <div className={getNavClass("/notifications")}>
-                        <FaBell size={22} className={location.pathname === "/notifications" ? "scale-110" : ""} />
+                        <div className="relative">
+                            <FaBell size={22} className={location.pathname === "/notifications" ? "scale-110" : ""} />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white shadow-md">
+                                    {unreadCount > 9 ? "9+" : unreadCount}
+                                </span>
+                            )}
+                        </div>
                         <span className="text-[8px] font-black uppercase tracking-[0.1em]">Alerts</span>
                         {location.pathname === "/notifications" && (
                             <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-red-600" />

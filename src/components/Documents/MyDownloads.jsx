@@ -2,15 +2,22 @@ import { useEffect, useState, useRef } from "react";
 import axiosSecure from "../utils/axiosSecure";
 import { FaDownload, FaHistory } from "react-icons/fa";
 
-export default function MyDownloads({ theme }) {
+export default function MyDownloads({ theme, searchQuery = "" }) {
   const isDark = theme === "dark";
   const [downloads, setDownloads] = useState([]);
   const [next, setNext] = useState(null);
   const loaderRef = useRef(null);
 
-  const fetchDownloads = async () => {
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchDownloads(searchQuery);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const fetchDownloads = async (query = "") => {
     try {
-      const res = await axiosSecure.get("/v1/documents/my-downloads/");
+      const res = await axiosSecure.get(`/v1/documents/my-downloads/?search=${encodeURIComponent(query)}`);
       const data = res.data;
       setDownloads(Array.isArray(data) ? data : (data?.results || []));
       setNext(data?.next || null);
@@ -18,10 +25,6 @@ export default function MyDownloads({ theme }) {
       console.error(err);
     }
   };
-
-  useEffect(() => {
-    fetchDownloads();
-  }, []);
 
   const loadMore = async () => {
     if (!next) return;
@@ -49,7 +52,7 @@ export default function MyDownloads({ theme }) {
   }, [next]);
 
   return (
-    <div className={`premium-card overflow-hidden animate-fadeIn `}>
+    <div className={`premium-card overflow-hidden animate-fadeIn ${isDark ? "bg-neutral-900 text-white" : "bg-white text-black"}`}>
       <div className={`p-8 border-b flex items-center justify-between ${isDark ? "border-white/5" : "border-black/5"}`}>
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-2xl bg-red-600/10 flex items-center justify-center text-red-500 shadow-inner">
