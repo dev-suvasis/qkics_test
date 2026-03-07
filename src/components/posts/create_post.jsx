@@ -173,7 +173,7 @@ function CreatePostModal({ onClose, onSuccess, isDark, post, knowledgeHub = fals
       } else {
         // --- CREATE FLOW ---
         mediaFiles.forEach((file) => {
-          formData.append("media", file);
+          formData.append("media_files", file);
         });
 
         const res = await axiosSecure.post("/v1/community/posts/", formData);
