@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { BiLike, BiSolidLike } from "react-icons/bi";
-import { FaEllipsisH, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaEllipsisH, FaChevronLeft, FaChevronRight, FaCrown } from "react-icons/fa";
 import { HiPencilAlt, HiTrash } from "react-icons/hi";
 import UserBadge from "../ui/UserBadge";
 import { useAlert } from "../../context/AlertContext";
@@ -101,6 +101,11 @@ export default function PostCard({
                                     : post.author.username}
                             </span>
                             <UserBadge userType={post.author.user_type} isDark={isDark} />
+                            {post.author.is_subscribed && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/10 shadow-sm shadow-amber-500/5">
+                                    <FaCrown size={10} className="text-amber-600" /> Premium
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider">
                             <span>{timeAgo(post.created_at)}</span>
@@ -150,7 +155,7 @@ export default function PostCard({
 
                 <div className="relative">
                     <p className="text-sm leading-relaxed opacity-80 font-medium whitespace-pre-wrap">
-                        {displayText} 
+                        {displayText}
                     </p>
 
                     {/* READ MORE — show when there's more content and not yet expanded */}

@@ -14,6 +14,7 @@ export default function Subscription() {
     const { showAlert } = useAlert();
 
     const [plans, setPlans] = useState([]);
+    const [activeSubscription, setActiveSubscription] = useState(null);
     const [loading, setLoading] = useState(true);
     const [subscribing, setSubscribing] = useState(null); // stores uuid of plan being subscribed to
 
@@ -25,18 +26,38 @@ export default function Subscription() {
     const border = isDark ? "border-white/5" : "border-black/5";
 
     useEffect(() => {
-        fetchPlans();
+        const loadInit = async () => {
+            setLoading(true);
+            await Promise.all([fetchPlans(), fetchActiveSubscription()]);
+            setLoading(false);
+        };
+        loadInit();
     }, []);
 
     const fetchPlans = async () => {
         try {
-            setLoading(true);
             const res = await axiosSecure.get("/v1/subscriptions/plans/");
             setPlans(Array.isArray(res.data) ? res.data : (res.data?.results || []));
         } catch (err) {
             console.error("Failed to load plans", err);
-        } finally {
-            setLoading(false);
+        }
+    };
+
+    const fetchActiveSubscription = async () => {
+        if (!user) return;
+        try {
+            const res = await axiosSecure.get("/v1/subscriptions/me/");
+            const subData = res.data;
+            if (subData && subData.is_active) {
+                const now = new Date();
+                const start = new Date(subData.start_date);
+                const end = new Date(subData.end_date);
+                if (now >= start && now <= end) {
+                    setActiveSubscription(subData);
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load active subscription", err);
         }
     };
 
@@ -94,6 +115,36 @@ export default function Subscription() {
                     </p>
                 </div>
 
+                {/* ACTIVE SUBSCRIPTION */}
+                {activeSubscription && (
+                    <div className={`mb-12 max-w-2xl mx-auto p-6 rounded-[2.5rem] border ${border} ${cardBg} backdrop-blur-xl animate-scaleIn relative overflow-hidden group`}>
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <MdDiamond size={120} />
+                        </div>
+                        <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+                            <div className="w-16 h-16 rounded-3xl bg-red-600/10 flex items-center justify-center text-red-600">
+                                <FaCrown size={32} />
+                            </div>
+                            <div className="text-center md:text-left flex-1">
+                                <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                                    <h3 className={`text-xl font-black uppercase tracking-tight ${text}`}>Active Subscription</h3>
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Active</span>
+                                </div>
+                                <p className={`text-sm font-bold ${muted}`}>
+                                    Plan: <span className={text}>{activeSubscription.plan_name || "Premium Plan"}</span>
+                                </p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mt-1">
+                                    Expires: {new Date(activeSubscription.end_date).toLocaleDateString(undefined, {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* PRICING GRID */}
                 {plans.length === 0 ? (
                     <div className={`text-center py-20 rounded-3xl border ${border} ${cardBg} backdrop-blur-xl`}>
@@ -105,29 +156,32 @@ export default function Subscription() {
                     <div className="flex flex-wrap justify-center mt-12 gap-6 md:gap-8 max-w-5xl mx-auto">
                         {plans.map((plan, index) => {
                             const isRecommended = index === 1; // Assuming middle plan is recommended for visual balance
+                            const isActivePlan = activeSubscription?.plan_uuid === plan.uuid;
 
                             return (
                                 <div
                                     key={plan.uuid}
                                     className={`relative group flex flex-col p-6 w-full max-w-[300px] rounded-3xl border transition-all duration-500 hover:-translate-y-2 hover:shadow-xl
-                    ${isDark
+                                         ${isDark
                                             ? "bg-neutral-900 border-neutral-800 hover:border-red-600/30"
                                             : "bg-white border-neutral-100 hover:border-red-600/20 hover:shadow-red-600/5"}
-                  `}
+                                         ${isActivePlan ? "ring-2 ring-red-600" : ""}
+                                      `}
                                 >
-                                    {isRecommended && (
+                                    {(isRecommended || isActivePlan) && (
                                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-red-600 text-white text-[9px] font-black uppercase tracking-[0.2em] shadow-lg shadow-red-600/40 z-10">
-                                            Most Popular
+                                            {isActivePlan ? "Current Plan" : "Most Popular"}
                                         </div>
                                     )}
 
                                     {/* CARD HEADER */}
                                     <div className="mb-6">
                                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl
-                      ${isDark ? "bg-neutral-800 text-white" : "bg-neutral-50 text-black"}
-                      group-hover:scale-110 transition-transform duration-500
-                    `}>
-                                            <FaCrown className={isRecommended ? "text-red-600" : "opacity-30"} />
+                                             ${isDark ? "bg-neutral-800 text-white" : "bg-neutral-50 text-black"}
+                                             group-hover:scale-110 transition-transform duration-500
+                                             ${isActivePlan ? "bg-red-600/10 text-red-600" : ""}
+                                           `}>
+                                            <FaCrown className={isRecommended || isActivePlan ? "text-red-600" : "opacity-30"} />
                                         </div>
                                         <h3 className={`text-xl font-black uppercase tracking-tight mb-1 ${text}`}>
                                             {plan.name}
@@ -154,12 +208,14 @@ export default function Subscription() {
                                     {/* ACTION BUTTON */}
                                     <button
                                         onClick={() => handleSubscribe(plan)}
-                                        disabled={subscribing !== null}
+                                        disabled={subscribing !== null || isActivePlan}
                                         className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.2em] transition-all
-                                             ${subscribing === plan.uuid ? "opacity-50 cursor-not-allowed" : ""}
-                                             ${isRecommended
-                                                ? "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700 hover:scale-[1.02]"
-                                                : `${isDark ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`
+                                             ${subscribing === plan.uuid || isActivePlan ? "opacity-50 cursor-not-allowed" : ""}
+                                             ${isActivePlan
+                                                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                                                : isRecommended
+                                                    ? "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700 hover:scale-[1.02]"
+                                                    : `${isDark ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`
                                             }
                                          `}
                                     >
@@ -167,6 +223,11 @@ export default function Subscription() {
                                             <div className="flex items-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                                 <span>Subscribing...</span>
+                                            </div>
+                                        ) : isActivePlan ? (
+                                            <div className="flex items-center gap-2">
+                                                <FaCheckCircle size={12} />
+                                                <span>Active</span>
                                             </div>
                                         ) : (
                                             <>Get Started <FaArrowRight size={12} /></>

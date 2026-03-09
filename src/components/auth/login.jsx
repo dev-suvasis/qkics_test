@@ -1,5 +1,5 @@
 // src/components/auth/Login.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { loginUser, fetchUserProfile } from "../../redux/slices/userSlice";
@@ -15,8 +15,6 @@ function LoginModal({ onClose, openSignup, isDark }) {
   const [loading, setLoading] = useState(false);
 
   const bg = isDark ? "bg-neutral-800 text-white" : "bg-white text-black";
-
-
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -41,9 +39,13 @@ function LoginModal({ onClose, openSignup, isDark }) {
       }
 
       await dispatch(fetchUserProfile());
-      sessionStorage.setItem('pending_alert', JSON.stringify({ message: "Login successful!", type: "success" }));
+
+      // ✅ FIX #1: No more window.location.reload()
+      // Redux state is now populated — React will re-render the entire tree
+      // automatically. No page reload needed, no Redux state wipe, no
+      // WebSocket disconnection, no scroll position loss.
+      showAlert("Login successful!", "success");
       onClose();
-      window.location.reload();
     } catch (err) {
       console.log(err);
       showAlert("Login failed", "error");
@@ -52,14 +54,22 @@ function LoginModal({ onClose, openSignup, isDark }) {
     setLoading(false);
   };
 
-  // ENTER KEY TRIGGER LOGIN
+  // ✅ FIX #3: Store handleLogin in a ref so the keydown listener always
+  // calls the latest version without needing to re-register itself.
+  // The effect runs only once (empty dep array) — no more stacked listeners
+  // or stale closure double-submit bug.
+  const handleLoginRef = useRef(handleLogin);
+  useEffect(() => {
+    handleLoginRef.current = handleLogin;
+  });
+
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "Enter") handleLogin();
+      if (e.key === "Enter") handleLoginRef.current();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  });
+  }, []); // ← empty array: registers once, never stacks
 
   return (
     <div className={`p-6 rounded-2xl shadow-xl w-[90%] max-w-sm ${bg}`}>
@@ -112,7 +122,6 @@ function LoginModal({ onClose, openSignup, isDark }) {
 
       <div className="mt-6 text-center">
         <button onClick={() => {
-          console.log("🔥 LOGIN → SIGNUP CLICKED");
           openSignup();
         }} className={`text-[10px] font-black uppercase tracking-widest hover:underline ${isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-black"
           }`}>

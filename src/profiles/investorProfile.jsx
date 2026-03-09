@@ -7,7 +7,7 @@ import axiosSecure from "../components/utils/axiosSecure";
 
 import { useAlert } from "../context/AlertContext";
 import { useConfirm } from "../context/ConfirmContext";
-import { FaBriefcase } from "react-icons/fa";
+import { FaBriefcase, FaCrown } from "react-icons/fa";
 import { MdOutlineEventAvailable } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 
@@ -52,6 +52,9 @@ export default function InvestorProfile({
   const [investorData, setInvestorData] = useState(profile || null);
   const user = investorData?.user || null;
   const [showImageModal, setShowImageModal] = useState(false);
+
+  const isOwnProfile = loggedUser?.username === user?.username;
+  const hasSubscription = user?.is_subscribed || (isOwnProfile && loggedUser?.is_subscribed);
 
   useEffect(() => {
     if (profile) setInvestorData(profile);
@@ -314,6 +317,11 @@ export default function InvestorProfile({
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 border border-blue-500/20">
                       <FaBriefcase size={12} /> Investor
                     </span>
+                    {hasSubscription && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-lg shadow-amber-500/5">
+                        <FaCrown className="mr-0.5 text-amber-600" size={12} /> Premium
+                      </span>
+                    )}
                   </div>
                 </div>
 

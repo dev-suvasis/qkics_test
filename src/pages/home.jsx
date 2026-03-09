@@ -47,7 +47,7 @@ function Home() {
   const [zoom, setZoom] = useState(1);
 
   // HOOKS
-  const { posts, setPosts, loaderRef, next } = useFeed(null, searchQuery);
+  const { posts, setPosts, loaderRef, next, loading, error, reload } = useFeed(null, searchQuery);
 
   const { handleLike } = useLike(
     setPosts,
@@ -252,15 +252,38 @@ function Home() {
               ))}
           </div>
 
-          <div ref={loaderRef} className="py-20 flex flex-col items-center justify-center opacity-30 gap-4">
-            {posts.length === 0 ? (
-              <p className="font-bold tracking-widest text-sm">NO DISCOVERIES YET</p>
-            ) : next ? (
+          {/* ── Feed error state — shown when loadFeed() throws ── */}
+          {error && !loading && (
+            <div className="py-16 flex flex-col items-center justify-center gap-4">
+              <p className={`text-sm font-bold ${isDark ? "text-red-400" : "text-red-600"}`}>{error}</p>
+              <button
+                onClick={reload}
+                className="text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* ── Initial loading spinner ── */}
+          {loading && posts.length === 0 && (
+            <div className="py-20 flex items-center justify-center opacity-40">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-red-500 border-white/10" />
-            ) : (
-              <p className="font-bold tracking-widest text-sm uppercase">End of Exploration</p>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* ── Infinite scroll sentinel + end-of-feed message ── */}
+          {!error && (
+            <div ref={loaderRef} className="py-20 flex flex-col items-center justify-center opacity-30 gap-4">
+              {!loading && posts.length === 0 ? (
+                <p className="font-bold tracking-widest text-sm">NO DISCOVERIES YET</p>
+              ) : next ? (
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-red-500 border-white/10" />
+              ) : posts.length > 0 ? (
+                <p className="font-bold tracking-widest text-sm uppercase">End of Exploration</p>
+              ) : null}
+            </div>
+          )}
         </main>
 
         {/* RIGHT SIDEBAR */}

@@ -1,8 +1,7 @@
 // src/components/auth/SignupModal.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useDispatch } from "react-redux";
-// import axiosSecure from "../utils/axiosSecure";
 import { API_BASE_URL } from "../../config/api";
 import { loginUser, fetchUserProfile } from "../../redux/slices/userSlice";
 import { useAlert } from "../../context/AlertContext";
@@ -28,13 +27,9 @@ function SignupModal({ onClose, openLogin, isDark }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
 
-  // const [userType, setUserType] = useState("normal");
-
   const [loading, setLoading] = useState(false);
 
   const bg = isDark ? "bg-neutral-800 text-white" : "bg-white text-black";
-
-
 
   // USERNAME VALIDATION
   const handleUsernameChange = async (value) => {
@@ -152,13 +147,12 @@ function SignupModal({ onClose, openLogin, isDark }) {
         username,
         password,
         password2,
-        email,          // avoid invalid empty string
+        email,
         phone,
-        user_type: "normal", // REQUIRED
+        user_type: "normal",
       };
 
       await axios.post(`${API_BASE_URL}/v1/auth/register/`, payload);
-
 
       const result = await dispatch(loginUser({ username, password }));
 
@@ -168,11 +162,14 @@ function SignupModal({ onClose, openLogin, isDark }) {
       }
 
       await dispatch(fetchUserProfile());
+
+      // ✅ No window.location.reload() — Redux is already updated.
+      // React will re-render from the new user state automatically.
       showAlert("Signup successful!", "success");
       onClose();
     } catch (err) {
-      console.log("🔥 SIGNUP ERROR FULL →", err);
-      console.log("🔥 SIGNUP ERROR RESPONSE →", err.response);
+      console.log("SIGNUP ERROR FULL →", err);
+      console.log("SIGNUP ERROR RESPONSE →", err.response);
 
       showAlert(
         err.response?.data?.detail ||
@@ -182,20 +179,25 @@ function SignupModal({ onClose, openLogin, isDark }) {
       );
     }
 
-
     setLoading(false);
   };
 
+  // ✅ FIX #3: Store handleSignup in a ref so the keydown listener always
+  // calls the latest version without re-registering itself every render.
+  // The effect runs only once (empty dep array) — no more stacked listeners
+  // or stale closure double-submit bug.
+  const handleSignupRef = useRef(handleSignup);
+  useEffect(() => {
+    handleSignupRef.current = handleSignup;
+  });
 
-  // ENTER KEY → SUBMIT SIGNUP
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "Enter") handleSignup();
+      if (e.key === "Enter") handleSignupRef.current();
     };
     window.addEventListener("keydown", handler);
-
     return () => window.removeEventListener("keydown", handler);
-  });
+  }, []); // ← empty array: registers once, never stacks
 
   return (
     <div className={`p-6 rounded-2xl shadow-xl w-[90%] max-w-sm space-y-3 ${bg}`}>
@@ -280,21 +282,6 @@ function SignupModal({ onClose, openLogin, isDark }) {
       />
       {phoneErr && <p className="text-red-500 text-xs">{phoneErr}</p>}
 
-      {/* USER TYPE */}
-      {/* <div className="mt-2">
-        <p className="text-sm mb-1">Select Account Type</p>
-
-        <label className="flex items-center space-x-2">
-          <input
-            type="radio"
-            value="normal"
-            checked={userType === "normal"}
-            onChange={() => setUserType("normal")}
-          />
-          <span>Normal</span>
-        </label>
-      </div> */}
-
       <button
         onClick={handleSignup}
         disabled={loading}
@@ -308,7 +295,6 @@ function SignupModal({ onClose, openLogin, isDark }) {
 
       <div className="pt-2 text-center">
         <button onClick={() => {
-          console.log("🔥 SIGNUP → LOGIN CLICKED");
           openLogin();
         }} className={`text-[10px] font-black uppercase tracking-widest hover:underline ${isDark ? "text-neutral-400 hover:text-white" : "text-neutral-500 hover:text-black"
           }`}>

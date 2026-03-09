@@ -5,7 +5,7 @@ import { MdEdit } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearPostViewState } from "../redux/slices/postViewSlice";
-import { FaUser, FaRocket, FaGraduationCap } from "react-icons/fa";
+import { FaUser, FaRocket, FaGraduationCap, FaCrown } from "react-icons/fa";
 import { MdOutlineUpgrade } from "react-icons/md";
 
 
@@ -36,8 +36,12 @@ export default function NormalProfile({
   readOnly = false,
   disableSelfFetch = false,
 }) {
-  const { theme, activeProfileData } = useSelector((state) => state.user);
+  const { theme, activeProfileData, data: loggedUser } = useSelector((state) => state.user);
   const profile = activeProfileData?.profile || propProfile;
+
+  const profileUser = profile?.user || profile || {};
+  const isOwnProfile = loggedUser?.username === profileUser.username;
+  const hasSubscription = profileUser.is_subscribed || (isOwnProfile && loggedUser?.is_subscribed);
 
   const isDark = theme === "dark";
   const { showAlert } = useAlert();
@@ -64,10 +68,10 @@ export default function NormalProfile({
   /* -------------------------------
       USER + EDIT FORM STATE
   ------------------------------- */
-  const [profileUser, setProfileUser] = useState(profile || null);
+  const [profileState, setProfileState] = useState(profile || null);
 
   useEffect(() => {
-    if (profile) setProfileUser(profile);
+    if (profile) setProfileState(profile);
   }, [profile]);
 
 
@@ -95,7 +99,7 @@ export default function NormalProfile({
         const userRes = await axiosSecure.get("/v1/auth/me/");
         const user = userRes.data;
 
-        setProfileUser(user);
+        setProfileState(user);
         dispatch(setActiveProfileData({ role: "normal", profile: user }));
 
         setEditData({
@@ -142,7 +146,7 @@ export default function NormalProfile({
       });
 
       const savedUser = res.data.user ?? res.data;
-      setProfileUser(savedUser);
+      setProfileState(savedUser);
 
       dispatch(setActiveProfileData({ role: "normal", profile: savedUser }));
 
@@ -178,7 +182,7 @@ export default function NormalProfile({
       const res = await axiosSecure.patch("/v1/auth/me/update/", formData);
 
       const updatedUser = res.data.user ?? res.data;
-      setProfileUser(updatedUser);
+      setProfileState(updatedUser);
 
       dispatch(setActiveProfileData({ role: "normal", profile: updatedUser }));
       dispatch(updateProfilePicture(updatedUser.profile_picture));
@@ -302,7 +306,11 @@ export default function NormalProfile({
                       @{profileUser?.username}
                     </span>
                     <UserBadge userType={profileUser.user_type || "normal"} />
-
+                    {hasSubscription && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-lg shadow-amber-500/5 transition-all">
+                        <FaCrown className="mr-0.5 text-amber-600" size={12} /> Premium
+                      </span>
+                    )}
                   </div>
                 </div>
 

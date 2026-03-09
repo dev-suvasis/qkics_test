@@ -4,7 +4,7 @@ import { MdEdit } from "react-icons/md";
 import axiosSecure from "../components/utils/axiosSecure";
 import { useAlert } from "../context/AlertContext";
 import { useConfirm } from "../context/ConfirmContext";
-import { FaGraduationCap } from "react-icons/fa";
+import { FaGraduationCap, FaCrown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineEventAvailable } from "react-icons/md";
 
@@ -68,6 +68,9 @@ export default function ExpertProfile({
   const [expertData, setExpertData] = useState(profile || null);
   const user = expertData?.user || null;
   const [showImageModal, setShowImageModal] = useState(false);
+
+  const isOwnProfile = loggedUser?.username === user?.username;
+  const hasSubscription = user?.is_subscribed || (isOwnProfile && loggedUser?.is_subscribed);
 
   useEffect(() => {
     if (profile) setExpertData(profile);
@@ -396,6 +399,11 @@ export default function ExpertProfile({
                     {expertData.verified_by_admin && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-500/10 text-green-500 border border-green-500/20">
                         Verified
+                      </span>
+                    )}
+                    {hasSubscription && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-lg shadow-amber-500/5">
+                        <FaCrown className="mr-0.5 text-amber-600" size={12} /> Premium
                       </span>
                     )}
                   </div>

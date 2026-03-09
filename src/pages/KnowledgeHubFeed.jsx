@@ -128,7 +128,7 @@ function KnowledgeHubFeed() {
                 <aside className="hidden lg:block lg:col-span-3">
                     <div className="sticky top-24 space-y-6">
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col mt-5 gap-2">
                             <h1 className="text-xl font-bold uppercase tracking-widest text-red-600">Knowledge Hub</h1>
                             <p className={`text-xs uppercase tracking-widest font-black opacity-40 mb-2 ${isDark ? "text-white" : "text-black"}`}>Researched Based Feed</p>
                         </div>

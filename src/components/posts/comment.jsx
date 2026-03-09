@@ -6,7 +6,7 @@ import useCommentLike from "../hooks/useCommentLike";
 import { getAccessToken } from "../../redux/store/tokenManager";
 
 import { BiLike, BiSolidLike } from "react-icons/bi";
-import { FaReply, FaTrash } from "react-icons/fa";
+import { FaReply, FaTrash, FaCrown } from "react-icons/fa";
 import { FiArrowLeft } from "react-icons/fi";
 
 import { useSelector, useDispatch } from "react-redux";
@@ -388,9 +388,16 @@ export default function Comments() {
                   className="w-12 h-12 rounded-2xl object-cover shadow-lg"
                 />
                 <div>
-                  <p className={`font-bold ${text} text-lg leading-tight`}>
-                    {post.author.first_name ? `${post.author.first_name} ${post.author.last_name || ""}` : post.author.username}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className={`font-bold ${text} text-lg leading-tight`}>
+                      {post.author.first_name ? `${post.author.first_name} ${post.author.last_name || ""}` : post.author.username}
+                    </p>
+                    {post.author.is_subscribed && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/10 mb-0.5">
+                        <FaCrown size={10} /> Premium
+                      </span>
+                    )}
+                  </div>
                   <p className={`text-xs font-bold uppercase tracking-wider ${mutedText}`}>@{post.author.username}</p>
                 </div>
               </div>
@@ -547,7 +554,14 @@ export default function Comments() {
                         className="w-10 h-10 rounded-xl"
                       />
                       <div>
-                        <p className={`font-bold text-sm ${text}`}>@{c.author.username}</p>
+                        <div className="flex items-center gap-2">
+                          <p className={`font-bold text-sm ${text}`}>@{c.author.username}</p>
+                          {c.author.is_subscribed && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/10">
+                              <FaCrown size={8} /> 
+                            </span>
+                          )}
+                        </div>
                         <p className={`text-[10px] uppercase tracking-wider font-bold opacity-50 ${text}`}>{c.author.user_type}</p>
                       </div>
                     </div>
