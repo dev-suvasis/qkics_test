@@ -102,12 +102,12 @@ function Navbar({ theme, onToggleTheme, user, onOpenLogin, onOpenCreatePost }) {
             : "bg-white/80 border-b border-black/5"
         } backdrop-blur-xl supports-backdrop-filter:bg-opacity-60`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 lg:h-20 flex items-center justify-between gap-6">
 
           {/* LOGO */}
           <Link to="/" className="flex-shrink-0 group relative">
             <div className={`absolute -inset-2 rounded-xl blur-lg transition-all opacity-0 group-hover:opacity-100 ${isDark ? "bg-red-500/20" : "bg-red-500/10"}`} />
-            <img src="/logo.png" alt="logo" className="h-15 w-auto relative rounded-lg transform transition-transform duration-300 group-hover:scale-105" />
+            <img src="/logo.png" alt="logo" className="h-10 lg:h-12 w-auto relative rounded-lg transform transition-transform duration-300 group-hover:scale-105" />
           </Link>
 
           {/* DESKTOP NAV */}
@@ -303,13 +303,13 @@ function Navbar({ theme, onToggleTheme, user, onOpenLogin, onOpenCreatePost }) {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={openLogin}
-                    className={`hidden sm:block px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${isDark ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"}`}
+                    className={`px-4 sm:px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${isDark ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-black"}`}
                   >
                     Login
                   </button>
                   <button
                     onClick={() => layoutCtx?.openSignup?.()}
-                    className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all ${isDark ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`}
+                    className={`px-4 sm:px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all ${isDark ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`}
                   >
                     Join
                   </button>
@@ -356,7 +356,7 @@ function Navbar({ theme, onToggleTheme, user, onOpenLogin, onOpenCreatePost }) {
         {/* MOBILE SEARCH OVERLAY */}
         {searchMobile && (
           <div className={`lg:hidden absolute inset-0 z-60 flex items-center px-4 animate-fadeIn ${isDark ? "bg-[#0a0a0a]" : "bg-white"}`}>
-            <div className={`flex items-center w-full gap-3 rounded-2xl px-4 py-3 border ${isDark ? "bg-neutral-900 border-white/10" : "bg-neutral-100 border-black/5"}`}>
+            <div className={`flex items-center w-full gap-3 rounded-2xl px-4 py-2 border ${isDark ? "bg-neutral-900 border-white/10" : "bg-neutral-100 border-black/5"}`}>
               <FaSearch className="text-red-600" />
               <input
                 autoFocus
@@ -379,7 +379,7 @@ function Navbar({ theme, onToggleTheme, user, onOpenLogin, onOpenCreatePost }) {
       </header>
 
       {/* Spacer so page content clears the fixed header */}
-      <div className="h-20" />
+      <div className="h-16 lg:h-20" />
     </>
   );
 }

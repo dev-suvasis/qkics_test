@@ -83,9 +83,11 @@ function UserLayoutInner() {
       />
 
       {/* ── Page content ───────────────────────────────────────────────── */}
-      <ErrorBoundary>
-        <Outlet />
-      </ErrorBoundary>
+      <main className="pb-16 lg:pb-0">
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
 
       {/* ── Mobile bottom nav ──────────────────────────────────────────── */}
       {/* Reads openLogin from context instead of taking it as a prop

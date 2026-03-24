@@ -20,9 +20,9 @@ const timeAgo = (dateString) => {
     };
     for (let unit in intervals) {
         const val = Math.floor(seconds / intervals[unit]);
-        if (val >= 1) return `${val}${unit[0]}`;
+        if (val >= 1) return `${val} ${unit}${val > 1 ? 's' : ''} ago`;
     }
-    return "now";
+    return "just now";
 };
 
 export default function CompanyPostCard({ post, isDark, onDelete, onEdit, isOwner }) {
@@ -58,7 +58,7 @@ export default function CompanyPostCard({ post, isDark, onDelete, onEdit, isOwne
                         >
                             {post.company?.name || "Organisation Insight"}
                         </Link>
-                        <p className="text-[10px] font-bold opacity-40 uppercase tracking-tighter">{timeAgo(post.created_at)}</p>
+                        <p className="text-[10px] font-bold opacity-40 tracking-tighter">{timeAgo(post.created_at)}</p>
                     </div>
                 </div>
 

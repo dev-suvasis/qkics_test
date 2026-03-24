@@ -9,12 +9,12 @@ import {
   MdMoreVert,
   MdArrowBack,
   MdChatBubbleOutline,
+  MdClose,
 } from "react-icons/md";
 import axiosSecure from "./components/utils/axiosSecure";
 import useChatSocket from "./components/hooks/useChatSocket.jsx";
 import "./chatPage.css";
 
-// ✅ FIX #10: TypingDots defined outside component to avoid re-creation on every render
 function TypingDots() {
   return (
     <span className="flex gap-1">
@@ -23,6 +23,21 @@ function TypingDots() {
       <span className="dot" />
     </span>
   );
+}
+
+// ✅ WhatsApp-style date formatting
+function formatMessageDate(dateStr) {
+  const date = new Date(dateStr);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return "Today";
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function ChatPage() {
@@ -46,6 +61,19 @@ export default function ChatPage() {
   const typingTimeout = useRef(null);
   // ✅ FIX #6: Track which message IDs we've already sent read receipts for
   const readMessageIds = useRef(new Set());
+
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // ✅ FIX #5: Read token from a ref that stays current so the WebSocket
   //    reconnects with a fresh token if it rotates during the session.
@@ -95,7 +123,6 @@ export default function ChatPage() {
 
         // Replace optimistic placeholder for my own messages
         if (isMe) {
-          // ✅ FIX #7: Use explicit `isOptimistic` flag instead of ID-length heuristic
           const optimisticIndex = prev.findIndex(
             (m) => m.isOptimistic && m.is_mine && m.text === incomingMsg.text
           );
@@ -113,25 +140,58 @@ export default function ChatPage() {
 
         return [...prev, incomingMsg];
       });
+
+      // ✅ Update online status of sender (if not me)
+      const isMe = msg.sender === user?.username || msg.sender_id === user?.id;
+      if (!isMe) {
+        setOnlineUsers((prev) => {
+          const updates = {};
+          if (msg.sender_id) updates[msg.sender_id] = true;
+          if (msg.sender) updates[msg.sender] = true;
+          return { ...prev, ...updates };
+        });
+      }
     },
     onTyping: (data) => {
       if (data.user === user?.username) return;
       setTypingUser(data.is_typing ? data.user : null);
+
+      // ✅ Also mark user as online when typing
+      if (data.is_typing && data.user) {
+        setOnlineUsers((prev) => ({ ...prev, [data.user]: true }));
+      }
     },
     onUserStatus: (data) => {
-      setOnlineUsers((prev) => ({
-        ...prev,
-        [data.user_id]: data.online,
-      }));
+      setOnlineUsers((prev) => {
+        const updates = {};
+        // Store by whatever identifier the server provides
+        if (data.user_id) updates[data.user_id] = data.online;
+        if (data.user) updates[data.user] = data.online;
+        if (data.username) updates[data.username] = data.online;
+        return { ...prev, ...updates };
+      });
     },
   });
 
-  // ✅ FIX #3: isUserOnline no longer conflates your own socket state with the
-  //    other user's presence. It only uses the `onlineUsers` map from server events.
+  // ✅ FIX #3: Robust isUserOnline check. It handles both basic Users and
+  //    Profile objects (Expert/Investor/Advisor) by checking all potential
+  //    identifiers against our online status map.
   const isUserOnline = useCallback(
-    (userId) => {
-      if (!userId) return false;
-      return onlineUsers[userId] ?? false;
+    (participant) => {
+      if (!participant) return false;
+      
+      // Check ID (might be profile ID or User ID depending on role)
+      const pid = participant.id;
+      // Check nested User ID (common in expert/advisor profiles)
+      const uid = participant.user?.id || participant.user_id;
+      // Check username (socket often uses this string)
+      const uname = participant.username || participant.user?.username;
+
+      return (
+        (pid && onlineUsers[pid]) ||
+        (uid && onlineUsers[uid]) ||
+        (uname && onlineUsers[uname])
+      ) ?? false;
     },
     [onlineUsers]
   );
@@ -225,6 +285,7 @@ export default function ChatPage() {
       text: newMessage,
       is_mine: true,
       created_at: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
 
@@ -325,7 +386,7 @@ export default function ChatPage() {
               const other = getOtherParticipant(room);
               const isActive = selectedRoom?.id === room.id;
               // ✅ FIX #3: Use the fixed isUserOnline (no longer always-true)
-              const isOnline = isUserOnline(other?.id);
+              const isOnline = isUserOnline(other);
 
               return (
                 <div
@@ -430,31 +491,61 @@ export default function ChatPage() {
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`h-2 w-2 rounded-full shadow-sm ${
-                        isUserOnline(otherUser?.id)
+                        isUserOnline(otherUser)
                           ? "bg-green-500 animate-pulse shadow-green-500/50"
                           : "bg-neutral-500"
                       }`}
                     />
                     <span className="text-[10px] font-black uppercase tracking-widest opacity-30">
-                      {isUserOnline(otherUser?.id) ? "Online" : "Offline"}
+                      {isUserOnline(otherUser) ? "Online" : "Offline"}
                     </span>
                   </div>
                 </div>
               </div>
-              <button
-                className={`h-11 w-11 flex items-center justify-center rounded-xl border border-black/5 dark:border-white/5 hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all group ${text}`}
-                aria-label="More options"
-              >
-                <MdMoreVert
-                  size={20}
-                  className="opacity-40 group-hover:opacity-100"
-                />
-              </button>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className={`h-11 w-11 flex items-center justify-center rounded-xl border border-black/5 dark:border-white/5 hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-all group ${
+                    showMenu
+                      ? "bg-black dark:bg-white text-white dark:text-black"
+                      : text
+                  }`}
+                  aria-label="More options"
+                >
+                  <MdMoreVert
+                    size={20}
+                    className={showMenu ? "opacity-100" : "opacity-40 group-hover:opacity-100"}
+                  />
+                </button>
+
+                {showMenu && (
+                  <div
+                    className={`absolute right-0 mt-2 w-48 rounded-2xl shadow-2xl border flex flex-col overflow-hidden z-100 animate-fadeIn ${
+                      isDark
+                        ? "bg-[#0d0d0d] border-white/5"
+                        : "bg-white border-black/5"
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        setSelectedRoom(null);
+                        setShowMenu(false);
+                      }}
+                      className={`flex items-center gap-3 px-3 py-3 text-xs font-black uppercase tracking-widest transition-colors hover:bg-red-600 hover:text-white ${
+                        isDark ? "text-white/60" : "text-black/60"
+                      }`}
+                    >
+                      <MdClose size={12} />
+                      Close Chat
+                    </button>
+                  </div>
+                )}
+              </div>
             </header>
 
             {/* MESSAGES */}
             <div
-              className={`flex-1 overflow-y-auto p-8 space-y-6 ${
+              className={`flex-1 overflow-y-auto p-4 space-y-1 ${
                 isDark ? "bg-[#0d0d0d]" : "bg-neutral-50"
               }`}
             >
@@ -468,7 +559,7 @@ export default function ChatPage() {
               ) : messagesError ? (
                 // ✅ FIX #4: Show message error with retry
                 <div className="flex flex-col items-center justify-center h-full">
-                  <p className="text-red-500 text-sm font-bold mb-3">
+                  <p className="text-red-500 text-sm font-bold mb-1">
                     {messagesError}
                   </p>
                   <button
@@ -486,48 +577,76 @@ export default function ChatPage() {
                   </p>
                 </div>
               ) : (
-                messages.map((msg) => {
-                  const isMine = msg.is_mine;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${
-                        isMine ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`group relative px-6 py-4 rounded-3xl text-sm font-medium shadow-sm transition-all duration-300 hover:shadow-lg max-w-[75%] sm:max-w-[70%] wrap-break-words whitespace-pre-wrap break-all border ${
-                          isMine
-                            ? "bg-red-600 text-white border-red-500 rounded-tr-sm"
-                            : isDark
-                            ? "bg-white/5 text-white border-white/5 rounded-tl-sm"
-                            : "bg-white text-black border-black/5 rounded-tl-sm"
-                        }`}
-                      >
-                        {msg.file ? (
-                          <a
-                            href={msg.file}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline font-bold"
-                          >
-                            📎 Encrypted Attachment
-                          </a>
-                        ) : (
-                          msg.text
+                (() => {
+                  let lastDate = null;
+                  return messages.map((msg) => {
+                    const msgTime = msg.timestamp || msg.created_at;
+                    const msgDateStr = new Date(msgTime).toDateString();
+                    const showHeader = msgDateStr !== lastDate;
+                    lastDate = msgDateStr;
+
+                    const isMine = msg.is_mine;
+                    return (
+                      <div key={msg.id} className="flex flex-col space-y-4">
+                        {showHeader && (
+                          <div className="flex justify-center my-6">
+                            <span
+                              className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border ${
+                                isDark
+                                  ? "bg-white/5 border-white/5 text-white/40"
+                                  : "bg-neutral-100 border-black/5 text-black/40"
+                              }`}
+                            >
+                              {formatMessageDate(msgTime)}
+                            </span>
+                          </div>
                         )}
-                        <span
-                          className={`absolute -bottom-5 right-0 text-[9px] font-black uppercase opacity-0 group-hover:opacity-30 transition-opacity tracking-tighter ${text}`}
+
+                        <div
+                          className={`flex ${
+                            isMine ? "justify-end" : "justify-start"
+                          }`}
                         >
-                          {new Date(msg.created_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
+                          <div
+                            className={`group relative px-4 py-1 rounded-3xl text-sm font-medium shadow-sm transition-all duration-300 hover:shadow-lg max-w-[85%] sm:max-w-[70%] wrap-break-words whitespace-pre-wrap break-all border flex flex-col gap-1 ${
+                              isMine
+                                ? "bg-red-600 text-white border-red-500 rounded-tr-sm"
+                                : isDark
+                                ? "bg-white/5 text-white border-white/5 rounded-tl-sm"
+                                : "bg-white text-black border-black/5 rounded-tl-sm"
+                            }`}
+                          >
+                            {msg.file ? (
+                              <a
+                                href={msg.file}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline font-bold"
+                              >
+                                📎 Encrypted Attachment
+                              </a>
+                            ) : (
+                              msg.text
+                            )}
+                            <div
+                              className={`flex items-center justify-end gap-1.5 ${
+                                isMine ? "text-white/50" : "opacity-30"
+                              }`}
+                            >
+                              <span className="text-[9px] font-black uppercase tracking-tighter">
+                                {new Date(msgTime).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  });
+                })()
               )}
               <div ref={messagesEndRef} />
             </div>

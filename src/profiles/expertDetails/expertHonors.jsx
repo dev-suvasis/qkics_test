@@ -158,7 +158,7 @@ export default function HonorsPage({
             >
               {/* Edit/Delete */}
               {!readOnly && (
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 flex gap-2 transition-opacity">
                   <button
                     onClick={() => openEditModal(h)}
                     className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-white/10 text-white" : "hover:bg-black/10 text-black"}`}

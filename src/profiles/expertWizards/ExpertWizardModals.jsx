@@ -95,7 +95,13 @@ function AddExperienceModal({ onClose, onCreate, isDark }) {
     }
     setSaving(true);
     try {
-      await onCreate(form);
+      // ✅ Sanitize: Convert empty date strings to null for backend Compatibility
+      const payload = {
+        ...form,
+        end_date: form.end_date || null,
+        start_date: form.start_date || null,
+      };
+      await onCreate(payload);
       onClose();
     } catch (error) {
       console.error(error);
@@ -332,7 +338,13 @@ function AddCertificationModal({ onClose, onCreate, isDark }) {
     }
     setSaving(true);
     try {
-      await onCreate(form);
+      // ✅ Sanitize dates: Convert empty strings to null for backend Compatibility
+      const payload = {
+        ...form,
+        issue_date: form.issue_date || null,
+        expiration_date: form.expiration_date || null,
+      };
+      await onCreate(payload);
       onClose();
     } finally {
       setSaving(false);
@@ -429,7 +441,12 @@ function AddHonorModal({ onClose, onCreate, isDark }) {
     }
     setSaving(true);
     try {
-      await onCreate(form);
+      // ✅ Sanitize date
+      const payload = {
+        ...form,
+        issue_date: form.issue_date || null,
+      };
+      await onCreate(payload);
       onClose();
     } finally {
       setSaving(false);

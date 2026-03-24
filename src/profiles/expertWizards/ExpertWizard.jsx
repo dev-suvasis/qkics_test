@@ -230,28 +230,59 @@ export default function ExpertWizard({ theme }) {
     /* ------------------------------
        CREATE CREDENTIAL ITEMS
     ------------------------------ */
+    const handleApiError = (err, fallback) => {
+        console.error(err);
+        const data = err.response?.data;
+        if (data && typeof data === 'object') {
+            const msgs = Object.entries(data).map(([k, v]) => {
+                const val = Array.isArray(v) ? v.join(", ") : v;
+                return `${k}: ${val}`;
+            }).join(" | ");
+            showAlert(msgs || fallback, "error");
+        } else {
+            showAlert(fallback, "error");
+        }
+        throw err;
+    };
+
     const createExperience = async (payload) => {
-        const res = await axiosSecure.post("/v1/experts/experience/", payload);
-        setExperiences((p) => [res.data, ...p]);
-        showAlert("Experience added", "success");
+        try {
+            const res = await axiosSecure.post("/v1/experts/experience/", payload);
+            setExperiences((p) => [res.data, ...p]);
+            showAlert("Experience added", "success");
+        } catch (err) {
+            handleApiError(err, "Failed to add experience");
+        }
     };
 
     const createEducation = async (payload) => {
-        const res = await axiosSecure.post("/v1/experts/education/", payload);
-        setEducations((p) => [res.data, ...p]);
-        showAlert("Education added", "success");
+        try {
+            const res = await axiosSecure.post("/v1/experts/education/", payload);
+            setEducations((p) => [res.data, ...p]);
+            showAlert("Education added", "success");
+        } catch (err) {
+            handleApiError(err, "Failed to add education");
+        }
     };
 
     const createCertification = async (payload) => {
-        const res = await axiosSecure.post("/v1/experts/certifications/", payload);
-        setCertifications((p) => [res.data, ...p]);
-        showAlert("Certification added", "success");
+        try {
+            const res = await axiosSecure.post("/v1/experts/certifications/", payload);
+            setCertifications((p) => [res.data, ...p]);
+            showAlert("Certification added", "success");
+        } catch (err) {
+            handleApiError(err, "Failed to add certification");
+        }
     };
 
     const createHonor = async (payload) => {
-        const res = await axiosSecure.post("/v1/experts/honors/", payload);
-        setHonors((p) => [res.data, ...p]);
-        showAlert("Honor added", "success");
+        try {
+            const res = await axiosSecure.post("/v1/experts/honors/", payload);
+            setHonors((p) => [res.data, ...p]);
+            showAlert("Honor added", "success");
+        } catch (err) {
+            handleApiError(err, "Failed to add honor");
+        }
     };
 
     const handleStartOver = () => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaPlus, FaTimes, FaSearch, FaTrash, FaUserPlus } from "react-icons/fa";
+import { FaPlus, FaTimes, FaSearch, FaTrash, FaUserPlus, FaSignOutAlt } from "react-icons/fa";
 import axiosSecure from "../../../components/utils/axiosSecure";
 import { resolveMedia } from "../../../components/utils/mediaUrl";
 import ModalOverlay from "../../../components/ui/ModalOverlay";
@@ -7,7 +7,7 @@ import { useAlert } from "../../../context/AlertContext";
 import ConfirmationAlert from "../../../components/ui/ConfirmationAlert";
 import { useSelector } from "react-redux";
 
-export default function CompanyMembers({ companyId, isDark, isOwner, text }) {
+export default function CompanyMembers({ companyId, isDark, isOwner, text, onLeaveSuccess }) {
   const { showAlert } = useAlert();
   const { data: loggedUser } = useSelector((state) => state.user);
   const [members, setMembers] = useState([]);
@@ -17,6 +17,7 @@ export default function CompanyMembers({ companyId, isDark, isOwner, text }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState(null);
 
   // Current user's role in this company
@@ -100,6 +101,19 @@ export default function CompanyMembers({ companyId, isDark, isOwner, text }) {
     }
   };
 
+  const confirmLeave = async () => {
+    try {
+      await axiosSecure.delete(`/v1/companies/${companyId}/members/${loggedUser?.uuid}/remove/`);
+      showAlert("You have left the company", "success");
+      setShowLeaveConfirm(false);
+      onLeaveSuccess?.();
+    } catch (err) {
+      console.error("Error leaving company:", err);
+      showAlert(err.response?.data?.message || "Error leaving company", "error");
+      setShowLeaveConfirm(false);
+    }
+  };
+
   const bgCard = isDark ? "bg-neutral-900" : "bg-white";
 
   return (
@@ -109,13 +123,23 @@ export default function CompanyMembers({ companyId, isDark, isOwner, text }) {
         <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDark ? "text-neutral-500" : "text-neutral-400"}`}>
           Members
         </h3>
-        {isActualOwner && (
+        
+        {isActualOwner ? (
           <button
             onClick={() => setShowSearchModal(true)}
             className="p-1.5 rounded-lg bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
             title="Add Member"
           >
             <FaPlus size={10} />
+          </button>
+        ) : currentUserRole && (
+          <button
+            onClick={() => setShowLeaveConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white transition-all text-[8px] font-black uppercase tracking-widest shadow-sm"
+            title="Leave Company"
+          >
+            <FaSignOutAlt size={10} />
+            
           </button>
         )}
       </div>
@@ -263,6 +287,16 @@ export default function CompanyMembers({ companyId, isDark, isOwner, text }) {
             </div>
           </div>
         </ModalOverlay>
+      )}
+
+      {showLeaveConfirm && (
+        <ConfirmationAlert
+          title="Leave Organization"
+          message="Are you sure you want to leave this organization? You will no longer have access to its private dashboard."
+          confirmText="Leave"
+          onConfirm={confirmLeave}
+          onCancel={() => setShowLeaveConfirm(false)}
+        />
       )}
 
       {showDeleteConfirm && (

@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { BiLike, BiSolidLike } from "react-icons/bi";
-import { FaEllipsisH, FaChevronLeft, FaChevronRight, FaCrown } from "react-icons/fa";
+import { FaEllipsisH, FaChevronLeft, FaChevronRight, FaCrown, FaRegComments } from "react-icons/fa";
 import { HiPencilAlt, HiTrash } from "react-icons/hi";
 import UserBadge from "../ui/UserBadge";
 import { useAlert } from "../../context/AlertContext";
@@ -23,9 +23,11 @@ const timeAgo = (dateString) => {
     };
     for (let unit in intervals) {
         const val = Math.floor(seconds / intervals[unit]);
-        if (val >= 1) return `${val}${unit[0]}`;
+        if (val >= 1) {
+            return `${val} ${unit}${val > 1 ? 's' : ''} ago`;
+        }
     }
-    return "now";
+    return "just now";
 };
 
 export default function PostCard({
@@ -114,10 +116,8 @@ export default function PostCard({
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 opacity-40 text-[10px] font-bold tracking-wider">
                             <span>{timeAgo(post.created_at)}</span>
-                            <span>•</span>
-                            <span>Public Discovery</span>
                         </div>
                     </div>
                 </div>
@@ -338,7 +338,8 @@ export default function PostCard({
                         onClick={() => onCommentClick?.(post)}
                         className="flex items-center gap-3 px-5 py-2.5 rounded-xl border border-black/5 dark:border-white/5 hover:border-red-500/50 transition-all"
                     >
-                        <span className="text-base">💬</span>
+                        {/* <span className="text-base">💬</span> */}
+                        <FaRegComments size={18} />
                         <span className="text-xs font-bold text-neutral-500">{post.total_comments} Comments</span>
                     </button>
                 </div>

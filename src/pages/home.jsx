@@ -230,7 +230,7 @@ function Home() {
 
           <div className="space-y-2">
             {posts
-              .filter((post) => !post.knowledge_hub)
+              // .filter((post) => post.knowledge_hub)
               .map((post) => (
                 <PostCard
                   key={post.id}

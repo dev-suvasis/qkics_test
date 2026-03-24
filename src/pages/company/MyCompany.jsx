@@ -163,7 +163,12 @@ export default function MyCompany() {
   // user is always the owner of every company in allCompanies.
   // We set isOwner=true whenever the displayed company is in our fetched list.
   const isOwner = Boolean(
-    company && allCompanies.some((c) => c.id === company.id)
+    company && (
+        (company.owner?.uuid === loggedUser?.uuid) || 
+        (company.owner === loggedUser?.uuid) ||
+        (company.owner === loggedUser?.id) ||
+        (company.owner?.id === loggedUser?.id)
+    )
   );
 
   return (
@@ -477,6 +482,10 @@ export default function MyCompany() {
                                 isDark={isDark} 
                                 isOwner={isOwner} 
                                 text={text} 
+                                onLeaveSuccess={() => {
+                                  setCompany(null);
+                                  fetchCompanies();
+                                }}
                               />
                             </div>
                           </div>

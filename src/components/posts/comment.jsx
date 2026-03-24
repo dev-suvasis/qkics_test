@@ -6,12 +6,13 @@ import useCommentLike from "../hooks/useCommentLike";
 import { getAccessToken } from "../../redux/store/tokenManager";
 
 import { BiLike, BiSolidLike } from "react-icons/bi";
-import { FaReply, FaTrash, FaCrown } from "react-icons/fa";
+import { FaReply, FaTrash, FaCrown, FaComment } from "react-icons/fa";
 import { FiArrowLeft } from "react-icons/fi";
 
 import { useSelector, useDispatch } from "react-redux";
 import { clearPostViewState } from "../../redux/slices/postViewSlice";
-import { resolveAvatar } from "../utils/mediaUrl";
+import { resolveAvatar, resolveMedia } from "../utils/mediaUrl";
+import { normalizePost } from "../utils/normalizePost";
 
 import { useAlert } from "../../context/AlertContext";
 import { useConfirm } from "../../context/ConfirmContext";
@@ -75,6 +76,7 @@ export default function Comments() {
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
   const [expandedComments, setExpandedComments] = useState({});
   const [expandedPost, setExpandedPost] = useState(false);
@@ -127,7 +129,24 @@ export default function Comments() {
   --------------------------------------------------------- */
   const fetchPostDetails = async () => {
     const res = await axiosSecure.get(`/v1/community/posts/${postId}/`);
-    setPost(res.data);
+    setPost(normalizePost(res.data.data || res.data));
+  };
+
+  const handleLikePost = async () => {
+    if (!getAccessToken()) {
+      return alert("Please log in to like this post.");
+    }
+    try {
+      const res = await axiosSecure.post(`/v1/community/posts/${postId}/like/`);
+      const updated = normalizePost(res.data.data || res.data);
+      setPost((prev) => ({
+        ...prev,
+        is_liked: updated.is_liked,
+        total_likes: updated.total_likes,
+      }));
+    } catch (error) {
+      console.log("Post like error:", error);
+    }
   };
 
   /* -------------------------------------------------------
@@ -227,6 +246,9 @@ export default function Comments() {
       ...p,
     ]);
 
+    // ✅ Increment total comment count in local post state
+    setPost(prev => ({ ...prev, total_comments: (prev.total_comments || 0) + 1 }));
+
     setContent("");
   };
 
@@ -259,6 +281,9 @@ export default function Comments() {
     setReplyContent("");
     setActiveReplyBox(null);
     setOpenReplies((p) => ({ ...p, [commentId]: true }));
+
+    // ✅ Increment total comment count (including replies) in post state
+    setPost(prev => ({ ...prev, total_comments: (prev.total_comments || 0) + 1 }));
   };
 
   /* -------------------------------------------------------
@@ -276,6 +301,8 @@ export default function Comments() {
           `/v1/community/comments/${commentId}/`
         );
         setComments((p) => p.filter((c) => c.id !== commentId));
+        // ✅ Decrement total comment count in local post state
+        setPost(prev => ({ ...prev, total_comments: Math.max(0, (prev.total_comments || 0) - 1) }));
         showAlert("Comment deleted", "success");
       },
     });
@@ -306,6 +333,8 @@ export default function Comments() {
               : c
           )
         );
+        // ✅ Decrement total comment count in local post state
+        setPost(prev => ({ ...prev, total_comments: Math.max(0, (prev.total_comments || 0) - 1) }));
         showAlert("Reply deleted", "success");
       },
     });
@@ -378,8 +407,8 @@ export default function Comments() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* LEFT — POST (Sticky) */}
-          <div className="lg:col-span-6 xl:col-span-7 lg:sticky lg:top-28">
-            <div className={`p-6 md:p-8 rounded-3xl border ${borderColor} ${cardBg} shadow-2xl`}>
+          <div className="lg:col-span-6 lg:sticky lg:top-28">
+            <div className={`p-6 md:p-8 shadow-2xl rounded-[32px] ${borderColor} ${cardBg} border shadow-black/10`}>
 
               {/* POST HEADER */}
               <div className="flex items-center gap-4 mb-6">
@@ -420,8 +449,8 @@ export default function Comments() {
                 const previewLength = post.preview_length || 300;
                 const isLongContent = fullContent.length > previewLength || (isLocked && fullContent.length > 150);
 
-                const displayText = expandedPost 
-                  ? fullContent 
+                const displayText = expandedPost
+                  ? fullContent
                   : (isLongContent ? fullContent.slice(0, previewLength) + "..." : fullContent);
                 const isGated = expandedPost && isLocked;
 
@@ -506,25 +535,102 @@ export default function Comments() {
                 </div>
               )}
 
-              {post.image && (
+              {/* MEDIA */}
+              {post.media && post.media.length > 0 && (
+                <div className="mt-8 rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-black/50 overflow-hidden group relative">
+                  {post.media.length > 1 && (
+                    <div className="absolute top-4 right-4 z-30 bg-black/60 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full backdrop-blur-md">
+                      {currentMediaIndex + 1} / {post.media.length}
+                    </div>
+                  )}
+
+                  <div className="w-full flex items-center justify-center bg-black/20 min-h-[300px]">
+                    {post.media[currentMediaIndex].media_type === "video" ? (
+                      <video
+                        src={resolveMedia(post.media[currentMediaIndex].file)}
+                        controls
+                        className="max-h-[600px] w-full object-contain"
+                      />
+                    ) : (
+                      <img
+                        src={resolveMedia(post.media[currentMediaIndex].file)}
+                        alt="post"
+                        className="w-full h-auto max-h-[600px] object-contain transition-all duration-500"
+                      />
+                    )}
+                  </div>
+
+                  {post.media.length > 1 && (
+                    <div className="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <button
+                        onClick={() => setCurrentMediaIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentMediaIndex === 0}
+                        className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black transition-all pointer-events-auto disabled:opacity-30"
+                      >
+                        ◀
+                      </button>
+                      <button
+                        onClick={() => setCurrentMediaIndex(prev => Math.min(post.media.length - 1, prev + 1))}
+                        disabled={currentMediaIndex === post.media.length - 1}
+                        className="w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black transition-all pointer-events-auto disabled:opacity-30"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* FALLBACK FOR SINGLE IMAGE IF PRESENT */}
+              {!post.media && post.image && (
                 <div className="mt-8 rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-black/50">
                   <img
-                    src={post.image}
+                    src={resolveMedia(post.image)}
                     alt="post"
                     className="w-full h-auto max-h-[600px] object-contain"
                   />
                 </div>
               )}
 
-              <div className={`mt-6 pt-6 border-t ${borderColor} flex items-center justify-between text-xs font-bold uppercase tracking-wider ${mutedText}`}>
-                <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                <span>{comments.length} Comments</span>
+              <div className={`mt-8 pt-6 border-t ${borderColor} flex items-center justify-between`}>
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={handleLikePost}
+                    className={`flex items-center gap-2 group transition-all ${post.is_liked ? "text-red-500" : mutedText
+                      }`}
+                  >
+                    <div className={`p-2 rounded-xl transition-all ${post.is_liked ? "bg-red-500/10" : "bg-black/5 dark:bg-white/5"
+                      }`}>
+                      {post.is_liked ? <BiSolidLike size={18} /> : <BiLike size={18} />}
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest leading-none">
+                      {post.total_likes}
+                    </span>
+                  </button>
+
+                  <div className={`flex items-center gap-2 ${mutedText}`}>
+                    <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5">
+                      <FaComment size={14} />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest leading-none">
+                      {post.total_comments || 0}
+                    </span>
+                  </div>
+                </div>
+
+                <span className={`text-[10px] font-black uppercase tracking-widest ${mutedText} opacity-30`}>
+                  {new Date(post.created_at).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
               </div>
             </div>
           </div>
 
           {/* RIGHT — COMMENTS */}
-          <div className="lg:col-span-6 xl:col-span-5 space-y-8">
+          <div className="lg:col-span-6 space-y-8">
             <h2 className={`text-xl font-black uppercase tracking-widest ${text} pl-2`}>Discussion</h2>
 
             {/* ADD COMMENT */}
@@ -578,7 +684,7 @@ export default function Comments() {
                           <p className={`font-bold text-sm ${text}`}>@{c.author.username}</p>
                           {c.author.is_subscribed && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/10">
-                              <FaCrown size={8} /> 
+                              <FaCrown size={8} />
                             </span>
                           )}
                         </div>
@@ -603,8 +709,8 @@ export default function Comments() {
                     const previewLength = c.preview_length || 300;
                     const isLongContent = fullContent.length > previewLength || (isLocked && fullContent.length > 150);
 
-                    const displayText = expanded 
-                      ? fullContent 
+                    const displayText = expanded
+                      ? fullContent
                       : (isLongContent ? fullContent.slice(0, previewLength) + "..." : fullContent);
                     const isGated = expanded && isLocked;
 

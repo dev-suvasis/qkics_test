@@ -19,35 +19,40 @@ function Logout() {
     hasRun.current = true;
 
     const doLogout = async () => {
-      // Reset the module-level refresh state first so queued requests
-      // don't hang waiting for a token that will never come
-      resetRefreshState();
-
-      // Clear Redux state immediately so navbar updates right away
-      dispatch(logoutUser());
-
       try {
         const refreshToken = getRefreshToken();
-        await axiosSecure.post(
-          `/v1/auth/logout/`,
-          { refresh: refreshToken }
-        );
+        
+        // 1. Call logout API first while tokens are still available
+        if (refreshToken) {
+          await axiosSecure.post(`/v1/auth/logout/`, { refresh: refreshToken });
+        }
       } catch (error) {
-        // Don't block logout if the API call fails — we still clear everything
-        console.log("Logout API error:", error.response?.data);
+        console.log("Logout API error (non-blocking):", error.response?.data);
       } finally {
-        // ✅ Always runs — clears all tokens, uuid, post cache
-        clearAllTokens();
+        // 2. Clear Redux state and tokens AFTER the API call
+        dispatch(logoutUser()); // This also calls clearAllTokens() inside the reducer
         dispatch(clearPosts());
-        sessionStorage.setItem('pending_alert', JSON.stringify({ message: "Logged out successfully.", type: "success" }));
+        
+        // 3. Reset module-level refresh state
+        resetRefreshState();
+
+        // 4. Redirect
+        // App.jsx expects "pendingAlert" in localStorage as a plain string
+        localStorage.setItem("pendingAlert", "Logged out successfully.");
         window.location.href = "/";
       }
     };
 
     doLogout();
-  }, [navigate, dispatch]);
+  }, [dispatch]);
 
-  return null;
+  // Show a clean fullscreen "Logging out..." screen to prevent navbar flickering or design breaking
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a]">
+      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-sm font-black uppercase tracking-widest opacity-50 dark:text-gray-400">Logging out...</p>
+    </div>
+  );
 }
 
 export default Logout;
