@@ -17,7 +17,7 @@ import { updatePost, addPost, setEditingPost, setCreateModalOpen, removePost } f
 
 import PostCard from "../../components/posts/PostCard";
 import ModalOverlay from "../../components/ui/ModalOverlay";
-import AdCard from "../../components/ui/AdCard";
+import SponsorCard from "../../components/ui/SponsorCard";
 import { getAccessToken } from "../../redux/store/tokenManager";
 
 export default function UserPosts() {
@@ -167,7 +167,7 @@ export default function UserPosts() {
 
       {/* RIGHT: Ads */}
       <aside className="hidden lg:block lg:col-span-4 space-y-8 pt-12">
-        <AdCard isDark={isDark} />
+        <SponsorCard isDark={isDark} />
       </aside>
 
       {/* POST MODAL */}

@@ -114,7 +114,7 @@ export default function DocumentList({ theme, searchQuery = "", filter = "all", 
                   ? "bg-white text-black hover:bg-neutral-200"
                   : "bg-black text-white hover:bg-neutral-800"}`}
               >
-                <FaEye size={12} className="md:size-[14px]" />
+                <FaEye size={12} className="md:size-3.5" />
                 <span className="hidden xs:inline">Analyze</span>
                 <span className="xs:hidden">View</span>
               </button>

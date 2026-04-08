@@ -19,7 +19,7 @@ import LoginModal from "../components/auth/login";
 import SignupModal from "../components/auth/Signup";
 import ModalOverlay from "../components/ui/ModalOverlay";
 import PostCard from "../components/posts/PostCard";
-import AdCard from "../components/ui/AdCard";
+import SponsorCard from "../components/ui/SponsorCard";
 
 function Home() {
   const { theme, data: loggedUser } = useSelector((state) => state.user);
@@ -289,7 +289,7 @@ function Home() {
         {/* RIGHT SIDEBAR */}
         <aside className="hidden lg:block lg:col-span-3">
           <div className="space-y-8 py-4">
-            <AdCard isDark={isDark} />
+            <SponsorCard isDark={isDark} />
 
             {/* <footer className="px-6 text-[10px] font-bold opacity-30 uppercase tracking-[0.2em] space-y-2">
               <div className="flex gap-4">

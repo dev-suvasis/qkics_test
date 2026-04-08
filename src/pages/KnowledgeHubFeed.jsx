@@ -19,7 +19,7 @@ import LoginModal from "../components/auth/login";
 import SignupModal from "../components/auth/Signup";
 import ModalOverlay from "../components/ui/ModalOverlay";
 import PostCard from "../components/posts/PostCard";
-import AdCard from "../components/ui/AdCard";
+import SponsorCard from "../components/ui/SponsorCard";
 
 function KnowledgeHubFeed() {
     const { theme, data: loggedUser } = useSelector((state) => state.user);
@@ -278,7 +278,7 @@ function KnowledgeHubFeed() {
                 {/* RIGHT SIDEBAR */}
                 <aside className="hidden lg:block lg:col-span-3">
                     <div className="space-y-8 py-4">
-                        <AdCard isDark={isDark} />
+                        <SponsorCard isDark={isDark} />
                     </div>
                 </aside>
             </div>

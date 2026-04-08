@@ -18,7 +18,7 @@ import { resolveMedia } from "../components/utils/mediaUrl";
 
 import UserDetails from "./basicDetails/userDetails";
 import UserPosts from "./basicDetails/userPosts";
-import InvestorDetails from "./investorDetails/investorDetails";
+import InvestorDetails from "./InvestorDetails/investorDetails";
 import ModalOverlay from "../components/ui/ModalOverlay";
 import UserBadge from "../components/ui/UserBadge";
 
