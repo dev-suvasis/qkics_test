@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Room, RoomEvent, Track, ConnectionState } from "livekit-client";
+import { Room, RoomEvent, Track, ConnectionState, setLogLevel } from "livekit-client";
+
+setLogLevel("warn");
 
 export function useLiveKit() {
   const roomRef = useRef(null);
