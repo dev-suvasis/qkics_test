@@ -31,29 +31,32 @@ export function useLiveKit() {
         setConnectionState(state);
       });
 
-      room.on(RoomEvent.TrackSubscribed, (track, publication) => {
-        if (publication.source === Track.Source.Camera) {
-          setRemoteVideoTrack(track);
-        } else if (publication.source === Track.Source.Microphone) {
-          setRemoteAudioTrack(track);
-        } else if (publication.source === Track.Source.ScreenShare) {
-          setScreenShareTrack(track);
-        } else if (publication.source === Track.Source.ScreenShareAudio) {
-          setScreenShareAudioTrack(track);
+      const routeTrackIn = (track, publication) => {
+        const isScreen = publication.source === Track.Source.ScreenShare
+          || publication.source === Track.Source.ScreenShareAudio;
+        if (track.kind === "video") {
+          if (isScreen) setScreenShareTrack(track);
+          else setRemoteVideoTrack(track);
+        } else if (track.kind === "audio") {
+          if (isScreen) setScreenShareAudioTrack(track);
+          else setRemoteAudioTrack(track);
         }
-      });
+      };
 
-      room.on(RoomEvent.TrackUnsubscribed, (_track, publication) => {
-        if (publication.source === Track.Source.Camera) {
-          setRemoteVideoTrack(null);
-        } else if (publication.source === Track.Source.Microphone) {
-          setRemoteAudioTrack(null);
-        } else if (publication.source === Track.Source.ScreenShare) {
-          setScreenShareTrack(null);
-        } else if (publication.source === Track.Source.ScreenShareAudio) {
-          setScreenShareAudioTrack(null);
+      const routeTrackOut = (track, publication) => {
+        const isScreen = publication.source === Track.Source.ScreenShare
+          || publication.source === Track.Source.ScreenShareAudio;
+        if (track?.kind === "video") {
+          if (isScreen) setScreenShareTrack(null);
+          else setRemoteVideoTrack(null);
+        } else if (track?.kind === "audio") {
+          if (isScreen) setScreenShareAudioTrack(null);
+          else setRemoteAudioTrack(null);
         }
-      });
+      };
+
+      room.on(RoomEvent.TrackSubscribed, routeTrackIn);
+      room.on(RoomEvent.TrackUnsubscribed, routeTrackOut);
 
       room.on(RoomEvent.LocalTrackPublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
@@ -86,12 +89,7 @@ export function useLiveKit() {
           if (!publication.isSubscribed) {
             try { publication.setSubscribed(true); } catch { /* ignore */ }
           }
-          const track = publication.track;
-          if (!track) return;
-          if (publication.source === Track.Source.Camera) setRemoteVideoTrack(track);
-          else if (publication.source === Track.Source.Microphone) setRemoteAudioTrack(track);
-          else if (publication.source === Track.Source.ScreenShare) setScreenShareTrack(track);
-          else if (publication.source === Track.Source.ScreenShareAudio) setScreenShareAudioTrack(track);
+          if (publication.track) routeTrackIn(publication.track, publication);
         });
       };
 

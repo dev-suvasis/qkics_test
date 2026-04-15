@@ -44,8 +44,18 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   const [activePanel, setActivePanel] = useState(null); // "chat" | "notes" | null
   const [note, setNote] = useState("");
   const [chatInput, setChatInput] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [lastSeenCount, setLastSeenCount] = useState(0);
   const timerRef = useRef(null);
+
+  const unreadCount = activePanel === "chat" ? 0 : Math.max(0, chat.messages.length - lastSeenCount);
+
+  const openPanel = useCallback((panel) => {
+    setActivePanel((curr) => {
+      const next = curr === panel ? null : panel;
+      if (next === "chat") setLastSeenCount(chat.messages.length);
+      return next;
+    });
+  }, [chat.messages.length]);
 
   useEffect(() => {
     (async () => {
@@ -139,14 +149,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    if (activePanel !== "chat" && chat.messages.length > 0) {
-      setUnreadCount((c) => c + 1);
-    }
   }, [chat.messages]);
-
-  useEffect(() => {
-    if (activePanel === "chat") setUnreadCount(0);
-  }, [activePanel]);
 
   const handleEndCall = useCallback(async () => {
     lk.disconnect();
@@ -213,18 +216,20 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   return (
     <div className="relative flex flex-col h-screen bg-neutral-950 text-white overflow-hidden">
       {/* ── Top bar ── */}
-      <header className="flex items-center justify-between px-5 py-3 bg-neutral-900/80 backdrop-blur border-b border-neutral-800 z-20">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30">
+      <header className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 bg-neutral-900/80 backdrop-blur border-b border-neutral-800 z-20">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 shrink-0">
             <FaCircle className="text-red-500 text-[8px] animate-pulse" />
-            <span className="text-xs font-medium text-red-300">LIVE</span>
+            <span className="text-[10px] sm:text-xs font-medium text-red-300">LIVE</span>
           </div>
-          <h1 className="text-sm font-medium text-neutral-200">Meeting in progress</h1>
+          <h1 className="text-xs sm:text-sm font-medium text-neutral-200 truncate hidden xs:block sm:block">
+            Meeting in progress
+          </h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {remaining !== null && (
             <div
-              className={`px-3 py-1 rounded-md font-mono text-sm tabular-nums ${
+              className={`px-2 sm:px-3 py-1 rounded-md font-mono text-xs sm:text-sm tabular-nums ${
                 isTimerLow
                   ? "bg-red-500/15 text-red-300 border border-red-500/30"
                   : "bg-neutral-800 text-neutral-200"
@@ -234,7 +239,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             </div>
           )}
           <span
-            className={`text-xs px-2 py-1 rounded ${
+            className={`hidden sm:inline text-xs px-2 py-1 rounded ${
               lk.isConnected ? "text-emerald-400 bg-emerald-500/10" : "text-amber-400 bg-amber-500/10"
             }`}
           >
@@ -277,12 +282,12 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
               ref={remoteRef}
               autoPlay
               playsInline
-              className="absolute bottom-36 right-4 w-40 h-28 object-cover rounded-lg border border-neutral-700 shadow-xl"
+              className="absolute bottom-32 sm:bottom-40 right-2 sm:right-4 w-24 h-16 sm:w-40 sm:h-28 object-cover rounded-lg border border-neutral-700 shadow-xl"
             />
           )}
 
           {/* Self PiP */}
-          <div className="absolute bottom-24 right-4 w-44 h-28 rounded-lg overflow-hidden border border-neutral-700 shadow-xl bg-neutral-800">
+          <div className="absolute bottom-20 sm:bottom-24 right-2 sm:right-4 w-24 h-16 sm:w-44 sm:h-28 rounded-lg overflow-hidden border border-neutral-700 shadow-xl bg-neutral-800">
             {lk.isCamOn && lk.localVideoTrack ? (
               <video
                 ref={localRef}
@@ -293,10 +298,10 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-neutral-900">
-                <FaVideoSlash className="text-neutral-600 text-xl" />
+                <FaVideoSlash className="text-neutral-600 text-lg sm:text-xl" />
               </div>
             )}
-            <span className="absolute bottom-1 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/60">
+            <span className="absolute bottom-1 left-1 sm:left-2 text-[9px] sm:text-[10px] font-medium px-1 sm:px-1.5 py-0.5 rounded bg-black/60">
               You
             </span>
           </div>
@@ -306,13 +311,20 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
           <audio ref={screenAudioRef} autoPlay className="hidden" />
         </section>
 
-        {/* ── Side panel ── */}
+        {/* ── Side panel (desktop) / bottom sheet (mobile) ── */}
         {activePanel && (
-          <aside className="w-[360px] bg-neutral-900 border-l border-neutral-800 flex flex-col z-10">
+          <>
+            <div
+              onClick={() => setActivePanel(null)}
+              className="sm:hidden fixed inset-0 bg-black/60 z-20"
+            />
+            <aside className="fixed sm:static inset-x-0 bottom-0 sm:inset-auto z-30 sm:z-10 h-[70vh] sm:h-auto w-full sm:w-[360px] bg-neutral-900 border-t sm:border-t-0 sm:border-l border-neutral-800 flex flex-col rounded-t-2xl sm:rounded-none">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
               <div className="flex gap-1">
                 <button
-                  onClick={() => setActivePanel("chat")}
+                  onClick={() => {
+                    if (activePanel !== "chat") openPanel("chat");
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
                     activePanel === "chat"
                       ? "bg-neutral-800 text-white"
@@ -322,7 +334,9 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
                   Chat
                 </button>
                 <button
-                  onClick={() => setActivePanel("notes")}
+                  onClick={() => {
+                    if (activePanel !== "notes") setActivePanel("notes");
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
                     activePanel === "notes"
                       ? "bg-neutral-800 text-white"
@@ -433,6 +447,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
               </div>
             )}
           </aside>
+          </>
         )}
       </div>
 
@@ -458,14 +473,14 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             label={lk.isScreenSharing ? "Stop share" : "Share"}
           />
           <ToolbarButton
-            onClick={() => setActivePanel(activePanel === "chat" ? null : "chat")}
+            onClick={() => openPanel("chat")}
             highlight={activePanel === "chat"}
             icon={<FaRegCommentDots />}
             label="Chat"
             badge={unreadCount}
           />
           <ToolbarButton
-            onClick={() => setActivePanel(activePanel === "notes" ? null : "notes")}
+            onClick={() => openPanel("notes")}
             highlight={activePanel === "notes"}
             icon={<FaRegStickyNote />}
             label="Notes"
