@@ -36,12 +36,12 @@ export function useLiveKit() {
         stopLocalTrackOnUnpublish: true,
       });
 
-      // ───────────── CONNECTION STATE ─────────────
+      // ───────── CONNECTION STATE ─────────
       room.on(RoomEvent.ConnectionStateChanged, (state) => {
         setConnectionState(state);
       });
 
-      // ───────────── TRACK ROUTING ─────────────
+      // ───────── TRACK ROUTING ─────────
       const routeTrackIn = (track) => {
         const src = track.source;
 
@@ -53,13 +53,13 @@ export function useLiveKit() {
           if (isScreen) {
             setScreenShareTrack(track);
           } else {
-            setRemoteVideoTrack((prev) => prev || track); // don't overwrite
+            setRemoteVideoTrack(track); // always overwrite (important)
           }
         } else if (track.kind === "audio") {
           if (isScreen) {
             setScreenShareAudioTrack(track);
           } else {
-            setRemoteAudioTrack((prev) => prev || track);
+            setRemoteAudioTrack(track);
           }
         }
       };
@@ -86,9 +86,9 @@ export function useLiveKit() {
         }
       };
 
-      // ───────────── EVENTS ─────────────
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        console.log("TrackSubscribed:", track.kind, track.source);
+      // ───────── EVENTS ─────────
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log("🎥 Subscribed:", participant.identity, track.kind);
         routeTrackIn(track);
       });
 
@@ -105,16 +105,23 @@ export function useLiveKit() {
       });
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
-        console.log("Participant connected:", participant.identity);
+        console.log("👤 Participant joined:", participant.identity);
 
-        participant.tracks.forEach(async (publication) => {
-          try {
-            await publication.setSubscribed(true);
-          } catch {}
-        });
+        // delayed sync for late join
+        setTimeout(() => {
+          participant.tracks.forEach(async (publication) => {
+            try {
+              await publication.setSubscribed(true);
+            } catch {}
+
+            if (publication.track) {
+              routeTrackIn(publication.track);
+            }
+          });
+        }, 500);
       });
 
-      // ───────────── LOCAL TRACK EVENTS ─────────────
+      // ───────── LOCAL TRACK EVENTS ─────────
       room.on(RoomEvent.LocalTrackPublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
           setLocalVideoTrack(publication.track || null);
@@ -141,26 +148,37 @@ export function useLiveKit() {
         }
       });
 
-      // ───────────── CONNECT ─────────────
+      // ───────── CONNECT ─────────
       try {
         await room.connect(livekitUrl.trim(), livekitToken.trim());
 
         await room.localParticipant.enableCameraAndMicrophone();
 
-        // Get local camera track
         const camPub = room.localParticipant.getTrack(Track.Source.Camera);
-        if (camPub?.track) {
-          setLocalVideoTrack(camPub.track);
-        }
+        if (camPub?.track) setLocalVideoTrack(camPub.track);
 
-        // 🔥 CRITICAL: absorb already-existing participants
-        room.participants.forEach((participant) => {
-          participant.tracks.forEach(async (publication) => {
-            try {
-              await publication.setSubscribed(true);
-            } catch {}
+        // 🔥 CRITICAL FIX: FORCE TRACK SYNC (multi-pass)
+        const forceTrackSync = () => {
+          console.log("🔁 Force syncing tracks...");
+
+          room.participants.forEach((participant) => {
+            participant.tracks.forEach(async (publication) => {
+              try {
+                await publication.setSubscribed(true);
+              } catch {}
+
+              if (publication.track) {
+                routeTrackIn(publication.track);
+              }
+            });
           });
-        });
+        };
+
+        // run multiple times to defeat race conditions
+        forceTrackSync();
+        setTimeout(forceTrackSync, 500);
+        setTimeout(forceTrackSync, 1500);
+        setTimeout(forceTrackSync, 3000);
 
         roomRef.current = room;
 
@@ -181,7 +199,7 @@ export function useLiveKit() {
     return promise;
   }, []);
 
-  // ───────────── CONTROLS ─────────────
+  // ───────── CONTROLS ─────────
   const toggleMic = useCallback(async () => {
     const room = roomRef.current;
     if (!room) return;
@@ -230,7 +248,7 @@ export function useLiveKit() {
 
     if (room) {
       try {
-        room.removeAllListeners(); // ✅ cleanup fix
+        room.removeAllListeners();
         await room.disconnect();
       } catch {}
     }
@@ -243,7 +261,7 @@ export function useLiveKit() {
     setScreenShareAudioTrack(null);
   }, []);
 
-  // ───────────── AUTO CLEANUP ─────────────
+  // ───────── CLEANUP ─────────
   useEffect(() => {
     return () => {
       connectPromiseRef.current = null;
@@ -271,4 +289,4 @@ export function useLiveKit() {
     isScreenSharing,
     isConnected: connectionState === ConnectionState.Connected,
   };
-} 
+}
