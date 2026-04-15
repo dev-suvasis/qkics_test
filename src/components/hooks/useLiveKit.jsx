@@ -31,27 +31,49 @@ export function useLiveKit() {
         setConnectionState(state);
       });
 
-      const routeTrackIn = (track, publication) => {
-        const isScreen = publication.source === Track.Source.ScreenShare
-          || publication.source === Track.Source.ScreenShareAudio;
+      // Use track.source (on the Track object) — always reliable regardless of
+      // how/when the publication arrives. publication.source can be "unknown"
+      // for late-joiners or when the track is absorbed from an existing participant.
+      const routeTrackIn = (track, _publication) => {
+        const src = track.source; // Track.Source enum — always populated
+        const isScreen =
+          src === Track.Source.ScreenShare ||
+          src === Track.Source.ScreenShareAudio;
+
         if (track.kind === "video") {
-          if (isScreen) setScreenShareTrack(track);
-          else setRemoteVideoTrack(track);
+          if (isScreen) {
+            setScreenShareTrack(track);
+          } else {
+            // Camera track from remote participant
+            setRemoteVideoTrack(track);
+          }
         } else if (track.kind === "audio") {
-          if (isScreen) setScreenShareAudioTrack(track);
-          else setRemoteAudioTrack(track);
+          if (isScreen) {
+            setScreenShareAudioTrack(track);
+          } else {
+            setRemoteAudioTrack(track);
+          }
         }
       };
 
-      const routeTrackOut = (track, publication) => {
-        const isScreen = publication.source === Track.Source.ScreenShare
-          || publication.source === Track.Source.ScreenShareAudio;
+      const routeTrackOut = (track, _publication) => {
+        const src = track?.source;
+        const isScreen =
+          src === Track.Source.ScreenShare ||
+          src === Track.Source.ScreenShareAudio;
+
         if (track?.kind === "video") {
-          if (isScreen) setScreenShareTrack(null);
-          else setRemoteVideoTrack(null);
+          if (isScreen) {
+            setScreenShareTrack(null);
+          } else {
+            setRemoteVideoTrack(null);
+          }
         } else if (track?.kind === "audio") {
-          if (isScreen) setScreenShareAudioTrack(null);
-          else setRemoteAudioTrack(null);
+          if (isScreen) {
+            setScreenShareAudioTrack(null);
+          } else {
+            setRemoteAudioTrack(null);
+          }
         }
       };
 
@@ -84,17 +106,33 @@ export function useLiveKit() {
         }
       });
 
+      // Absorb tracks already published by participants who joined before us.
+      // Iterate subscribed publications and call routeTrackIn for each one
+      // that already has a live track attached.
       const absorbExistingTracks = (participant) => {
         participant.tracks.forEach((publication) => {
+          // Force subscription if not yet subscribed
           if (!publication.isSubscribed) {
             try { publication.setSubscribed(true); } catch { /* ignore */ }
           }
-          if (publication.track) routeTrackIn(publication.track, publication);
+          // Route the track if it's already attached
+          if (publication.track) {
+            routeTrackIn(publication.track, publication);
+          }
         });
       };
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         absorbExistingTracks(participant);
+      });
+
+      // Also handle TrackPublished for participants already in room when we join
+      // (covers the case where a participant publishes a new track mid-call)
+      room.on(RoomEvent.TrackPublished, (publication, participant) => {
+        // Subscribe to it so TrackSubscribed fires
+        if (!publication.isSubscribed) {
+          try { publication.setSubscribed(true); } catch { /* ignore */ }
+        }
       });
 
       try {
@@ -104,6 +142,7 @@ export function useLiveKit() {
         const camPub = room.localParticipant.getTrack(Track.Source.Camera);
         if (camPub?.track) setLocalVideoTrack(camPub.track);
 
+        // Absorb any remote participants already in the room
         room.participants.forEach(absorbExistingTracks);
 
         roomRef.current = room;
