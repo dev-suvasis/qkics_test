@@ -1,5 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Room, RoomEvent, Track, ConnectionState, setLogLevel } from "livekit-client";
+import {
+  Room,
+  RoomEvent,
+  Track,
+  ConnectionState,
+  setLogLevel,
+} from "livekit-client";
 
 setLogLevel("warn");
 
@@ -7,17 +13,20 @@ export function useLiveKit() {
   const roomRef = useRef(null);
   const connectPromiseRef = useRef(null);
 
-  const [connectionState, setConnectionState] = useState(ConnectionState.Disconnected);
+  const [connectionState, setConnectionState] = useState(
+    ConnectionState.Disconnected
+  );
   const [localVideoTrack, setLocalVideoTrack] = useState(null);
   const [remoteVideoTrack, setRemoteVideoTrack] = useState(null);
   const [remoteAudioTrack, setRemoteAudioTrack] = useState(null);
   const [screenShareTrack, setScreenShareTrack] = useState(null);
   const [screenShareAudioTrack, setScreenShareAudioTrack] = useState(null);
+
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-  const connect = useCallback((livekitUrl, livekitToken) => {
+  const connect = useCallback(async (livekitUrl, livekitToken) => {
     if (connectPromiseRef.current) return connectPromiseRef.current;
 
     const promise = (async () => {
@@ -27,15 +36,15 @@ export function useLiveKit() {
         stopLocalTrackOnUnpublish: true,
       });
 
+      // ───────────── CONNECTION STATE ─────────────
       room.on(RoomEvent.ConnectionStateChanged, (state) => {
         setConnectionState(state);
       });
 
-      // Use track.source (on the Track object) — always reliable regardless of
-      // how/when the publication arrives. publication.source can be "unknown"
-      // for late-joiners or when the track is absorbed from an existing participant.
-      const routeTrackIn = (track, _publication) => {
-        const src = track.source; // Track.Source enum — always populated
+      // ───────────── TRACK ROUTING ─────────────
+      const routeTrackIn = (track) => {
+        const src = track.source;
+
         const isScreen =
           src === Track.Source.ScreenShare ||
           src === Track.Source.ScreenShareAudio;
@@ -44,20 +53,20 @@ export function useLiveKit() {
           if (isScreen) {
             setScreenShareTrack(track);
           } else {
-            // Camera track from remote participant
-            setRemoteVideoTrack(track);
+            setRemoteVideoTrack((prev) => prev || track); // don't overwrite
           }
         } else if (track.kind === "audio") {
           if (isScreen) {
             setScreenShareAudioTrack(track);
           } else {
-            setRemoteAudioTrack(track);
+            setRemoteAudioTrack((prev) => prev || track);
           }
         }
       };
 
-      const routeTrackOut = (track, _publication) => {
+      const routeTrackOut = (track) => {
         const src = track?.source;
+
         const isScreen =
           src === Track.Source.ScreenShare ||
           src === Track.Source.ScreenShareAudio;
@@ -77,9 +86,35 @@ export function useLiveKit() {
         }
       };
 
-      room.on(RoomEvent.TrackSubscribed, routeTrackIn);
-      room.on(RoomEvent.TrackUnsubscribed, routeTrackOut);
+      // ───────────── EVENTS ─────────────
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        console.log("TrackSubscribed:", track.kind, track.source);
+        routeTrackIn(track);
+      });
 
+      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        routeTrackOut(track);
+      });
+
+      room.on(RoomEvent.TrackPublished, async (publication) => {
+        try {
+          await publication.setSubscribed(true);
+        } catch (e) {
+          console.warn("Subscription failed:", e);
+        }
+      });
+
+      room.on(RoomEvent.ParticipantConnected, (participant) => {
+        console.log("Participant connected:", participant.identity);
+
+        participant.tracks.forEach(async (publication) => {
+          try {
+            await publication.setSubscribed(true);
+          } catch {}
+        });
+      });
+
+      // ───────────── LOCAL TRACK EVENTS ─────────────
       room.on(RoomEvent.LocalTrackPublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
           setLocalVideoTrack(publication.track || null);
@@ -106,52 +141,38 @@ export function useLiveKit() {
         }
       });
 
-      // Absorb tracks already published by participants who joined before us.
-      // Iterate subscribed publications and call routeTrackIn for each one
-      // that already has a live track attached.
-      const absorbExistingTracks = (participant) => {
-        participant.tracks.forEach((publication) => {
-          // Force subscription if not yet subscribed
-          if (!publication.isSubscribed) {
-            try { publication.setSubscribed(true); } catch { /* ignore */ }
-          }
-          // Route the track if it's already attached
-          if (publication.track) {
-            routeTrackIn(publication.track, publication);
-          }
-        });
-      };
-
-      room.on(RoomEvent.ParticipantConnected, (participant) => {
-        absorbExistingTracks(participant);
-      });
-
-      // Also handle TrackPublished for participants already in room when we join
-      // (covers the case where a participant publishes a new track mid-call)
-      room.on(RoomEvent.TrackPublished, (publication, participant) => {
-        // Subscribe to it so TrackSubscribed fires
-        if (!publication.isSubscribed) {
-          try { publication.setSubscribed(true); } catch { /* ignore */ }
-        }
-      });
-
+      // ───────────── CONNECT ─────────────
       try {
         await room.connect(livekitUrl.trim(), livekitToken.trim());
+
         await room.localParticipant.enableCameraAndMicrophone();
 
+        // Get local camera track
         const camPub = room.localParticipant.getTrack(Track.Source.Camera);
-        if (camPub?.track) setLocalVideoTrack(camPub.track);
+        if (camPub?.track) {
+          setLocalVideoTrack(camPub.track);
+        }
 
-        // Absorb any remote participants already in the room
-        room.participants.forEach(absorbExistingTracks);
+        // 🔥 CRITICAL: absorb already-existing participants
+        room.participants.forEach((participant) => {
+          participant.tracks.forEach(async (publication) => {
+            try {
+              await publication.setSubscribed(true);
+            } catch {}
+          });
+        });
 
         roomRef.current = room;
+
         setIsMicOn(room.localParticipant.isMicrophoneEnabled);
         setIsCamOn(room.localParticipant.isCameraEnabled);
+
         return room;
       } catch (err) {
         connectPromiseRef.current = null;
-        try { await room.disconnect(); } catch { /* ignore */ }
+        try {
+          await room.disconnect();
+        } catch {}
         throw err;
       }
     })();
@@ -160,6 +181,7 @@ export function useLiveKit() {
     return promise;
   }, []);
 
+  // ───────────── CONTROLS ─────────────
   const toggleMic = useCallback(async () => {
     const room = roomRef.current;
     if (!room) return;
@@ -171,11 +193,14 @@ export function useLiveKit() {
   const toggleCamera = useCallback(async () => {
     const room = roomRef.current;
     if (!room) return;
+
     const next = !room.localParticipant.isCameraEnabled;
     await room.localParticipant.setCameraEnabled(next);
     setIsCamOn(next);
-    if (!next) setLocalVideoTrack(null);
-    else {
+
+    if (!next) {
+      setLocalVideoTrack(null);
+    } else {
       const camPub = room.localParticipant.getTrack(Track.Source.Camera);
       if (camPub?.track) setLocalVideoTrack(camPub.track);
     }
@@ -184,6 +209,7 @@ export function useLiveKit() {
   const toggleScreenShare = useCallback(async () => {
     const room = roomRef.current;
     if (!room) return;
+
     const next = !room.localParticipant.isScreenShareEnabled;
     await room.localParticipant.setScreenShareEnabled(next);
     setIsScreenSharing(next);
@@ -192,14 +218,23 @@ export function useLiveKit() {
   const disconnect = useCallback(async () => {
     const pending = connectPromiseRef.current;
     connectPromiseRef.current = null;
+
     if (pending) {
-      try { await pending; } catch { /* ignore */ }
+      try {
+        await pending;
+      } catch {}
     }
+
     const room = roomRef.current;
     roomRef.current = null;
+
     if (room) {
-      try { await room.disconnect(); } catch { /* ignore */ }
+      try {
+        room.removeAllListeners(); // ✅ cleanup fix
+        await room.disconnect();
+      } catch {}
     }
+
     setConnectionState(ConnectionState.Disconnected);
     setLocalVideoTrack(null);
     setRemoteVideoTrack(null);
@@ -208,11 +243,13 @@ export function useLiveKit() {
     setScreenShareAudioTrack(null);
   }, []);
 
+  // ───────────── AUTO CLEANUP ─────────────
   useEffect(() => {
     return () => {
       connectPromiseRef.current = null;
       const room = roomRef.current;
       roomRef.current = null;
+      room?.removeAllListeners();
       room?.disconnect().catch(() => {});
     };
   }, []);
@@ -234,4 +271,4 @@ export function useLiveKit() {
     isScreenSharing,
     isConnected: connectionState === ConnectionState.Connected,
   };
-}
+} 
