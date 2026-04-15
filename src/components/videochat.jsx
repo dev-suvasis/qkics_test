@@ -318,7 +318,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
               onClick={() => setActivePanel(null)}
               className="sm:hidden fixed inset-0 bg-black/60 z-20"
             />
-            <aside className="fixed sm:static inset-x-0 bottom-0 sm:inset-auto z-30 sm:z-10 h-[70vh] sm:h-auto w-full sm:w-[360px] bg-neutral-900 border-t sm:border-t-0 sm:border-l border-neutral-800 flex flex-col rounded-t-2xl sm:rounded-none">
+            <aside className="fixed sm:static inset-x-0 bottom-0 sm:inset-auto z-30 sm:z-10 h-[75vh] max-h-[75vh] sm:h-auto sm:max-h-none w-full sm:w-[360px] bg-neutral-900 border-t sm:border-t-0 sm:border-l border-neutral-800 flex flex-col rounded-t-2xl sm:rounded-none overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
               <div className="flex gap-1">
                 <button
