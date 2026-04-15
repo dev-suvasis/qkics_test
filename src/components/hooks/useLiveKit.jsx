@@ -18,6 +18,8 @@ export function useLiveKit() {
   );
 
   const [localVideoTrack, setLocalVideoTrack] = useState(null);
+
+  // 🔥 NEW: store tracks per participant
   const [remoteTracks, setRemoteTracks] = useState({});
 
   const [isMicOn, setIsMicOn] = useState(true);
@@ -37,13 +39,19 @@ export function useLiveKit() {
         src === Track.Source.ScreenShareAudio;
 
       if (track.kind === "video") {
-        if (isScreen) user.screen = track;
-        else user.video = track;
+        if (isScreen) {
+          user.screen = track;
+        } else {
+          user.video = track;
+        }
       }
 
       if (track.kind === "audio") {
-        if (isScreen) user.screenAudio = track;
-        else user.audio = track;
+        if (isScreen) {
+          user.screenAudio = track;
+        } else {
+          user.audio = track;
+        }
       }
 
       return { ...prev, [id]: user };
@@ -78,7 +86,7 @@ export function useLiveKit() {
   };
 
   // ───────── CONNECT ─────────
-  const connect = useCallback(async (url, token) => {
+  const connect = useCallback(async (livekitUrl, livekitToken) => {
     if (connectPromiseRef.current) return connectPromiseRef.current;
 
     const promise = (async () => {
@@ -88,110 +96,113 @@ export function useLiveKit() {
         stopLocalTrackOnUnpublish: true,
       });
 
-      // connection state
-      room.on(RoomEvent.ConnectionStateChanged, setConnectionState);
+      // CONNECTION STATE
+      room.on(RoomEvent.ConnectionStateChanged, (state) => {
+        setConnectionState(state);
+      });
 
-      // track events
-      room.on(RoomEvent.TrackSubscribed, (track, _, participant) => {
+      // TRACK EVENTS
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log("🎥 Subscribed:", participant.identity, track.kind);
         routeTrackIn(track, participant);
       });
 
-      room.on(RoomEvent.TrackUnsubscribed, (track, _, participant) => {
+      room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
         routeTrackOut(track, participant);
       });
 
-      room.on(RoomEvent.TrackPublished, async (pub) => {
+      room.on(RoomEvent.TrackPublished, async (publication) => {
         try {
-          await pub.setSubscribed(true);
+          await publication.setSubscribed(true);
         } catch {}
       });
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
-        // delayed sync for late join
+        console.log("👤 Joined:", participant.identity);
+
+        // delayed sync
         setTimeout(() => {
-          participant.tracks.forEach(async (pub) => {
+          participant.tracks.forEach(async (publication) => {
             try {
-              await pub.setSubscribed(true);
+              await publication.setSubscribed(true);
             } catch {}
 
-            if (pub.track) {
-              routeTrackIn(pub.track, participant);
+            if (publication.track) {
+              routeTrackIn(publication.track, participant);
             }
           });
         }, 500);
       });
 
-      // local track events
-      room.on(RoomEvent.LocalTrackPublished, (pub) => {
-        if (pub.source === Track.Source.Camera) {
-          setLocalVideoTrack(pub.track || null);
+      // LOCAL TRACKS
+      room.on(RoomEvent.LocalTrackPublished, (publication) => {
+        if (publication.source === Track.Source.Camera) {
+          setLocalVideoTrack(publication.track || null);
           setIsCamOn(true);
         }
-        if (pub.source === Track.Source.Microphone) setIsMicOn(true);
-        if (pub.source === Track.Source.ScreenShare)
+        if (publication.source === Track.Source.Microphone) {
+          setIsMicOn(true);
+        }
+        if (publication.source === Track.Source.ScreenShare) {
           setIsScreenSharing(true);
+        }
       });
 
-      room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
-        if (pub.source === Track.Source.Camera) {
+      room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
+        if (publication.source === Track.Source.Camera) {
           setLocalVideoTrack(null);
           setIsCamOn(false);
         }
-        if (pub.source === Track.Source.Microphone) setIsMicOn(false);
-        if (pub.source === Track.Source.ScreenShare)
+        if (publication.source === Track.Source.Microphone) {
+          setIsMicOn(false);
+        }
+        if (publication.source === Track.Source.ScreenShare) {
           setIsScreenSharing(false);
+        }
       });
 
       // CONNECT
-      await room.connect(url.trim(), token.trim());
+      try {
+        await room.connect(livekitUrl.trim(), livekitToken.trim());
 
-      const p = room.localParticipant;
+        await room.localParticipant.enableCameraAndMicrophone();
 
-      // 🔥 CRITICAL FIX: camera renegotiation
-      await p.enableMicrophone();
+        const camPub = room.localParticipant.getTrack(Track.Source.Camera);
+        if (camPub?.track) setLocalVideoTrack(camPub.track);
 
-      await p.setCameraEnabled(false);
-      await new Promise((r) => setTimeout(r, 300));
-      await p.setCameraEnabled(true);
+        // 🔥 FORCE SYNC (multi-pass)
+        const forceSync = () => {
+          room.participants.forEach((participant) => {
+            participant.tracks.forEach(async (publication) => {
+              try {
+                await publication.setSubscribed(true);
+              } catch {}
 
-      // 🔥 EXTRA SAFETY (handles late join perfectly)
-      setTimeout(async () => {
-        if (p.isCameraEnabled) {
-          await p.setCameraEnabled(false);
-          await new Promise((r) => setTimeout(r, 500));
-          await p.setCameraEnabled(true);
-        }
-      }, 1000);
-
-      // get local camera
-      const camPub = p.getTrack(Track.Source.Camera);
-      if (camPub?.track) setLocalVideoTrack(camPub.track);
-
-      // 🔥 FORCE SYNC TRACKS
-      const forceSync = () => {
-        room.participants.forEach((participant) => {
-          participant.tracks.forEach(async (pub) => {
-            try {
-              await pub.setSubscribed(true);
-            } catch {}
-
-            if (pub.track) {
-              routeTrackIn(pub.track, participant);
-            }
+              if (publication.track) {
+                routeTrackIn(publication.track, participant);
+              }
+            });
           });
-        });
-      };
+        };
 
-      forceSync();
-      setTimeout(forceSync, 500);
-      setTimeout(forceSync, 1500);
+        forceSync();
+        setTimeout(forceSync, 500);
+        setTimeout(forceSync, 1500);
+        setTimeout(forceSync, 3000);
 
-      roomRef.current = room;
+        roomRef.current = room;
 
-      setIsMicOn(p.isMicrophoneEnabled);
-      setIsCamOn(p.isCameraEnabled);
+        setIsMicOn(room.localParticipant.isMicrophoneEnabled);
+        setIsCamOn(room.localParticipant.isCameraEnabled);
 
-      return room;
+        return room;
+      } catch (err) {
+        connectPromiseRef.current = null;
+        try {
+          await room.disconnect();
+        } catch {}
+        throw err;
+      }
     })();
 
     connectPromiseRef.current = promise;
@@ -200,34 +211,50 @@ export function useLiveKit() {
 
   // ───────── CONTROLS ─────────
   const toggleMic = useCallback(async () => {
-    const r = roomRef.current;
-    if (!r) return;
-    const next = !r.localParticipant.isMicrophoneEnabled;
-    await r.localParticipant.setMicrophoneEnabled(next);
+    const room = roomRef.current;
+    if (!room) return;
+    const next = !room.localParticipant.isMicrophoneEnabled;
+    await room.localParticipant.setMicrophoneEnabled(next);
     setIsMicOn(next);
   }, []);
 
   const toggleCamera = useCallback(async () => {
-    const r = roomRef.current;
-    if (!r) return;
-    const next = !r.localParticipant.isCameraEnabled;
-    await r.localParticipant.setCameraEnabled(next);
+    const room = roomRef.current;
+    if (!room) return;
+
+    const next = !room.localParticipant.isCameraEnabled;
+    await room.localParticipant.setCameraEnabled(next);
     setIsCamOn(next);
+
+    if (!next) {
+      setLocalVideoTrack(null);
+    } else {
+      const camPub = room.localParticipant.getTrack(Track.Source.Camera);
+      if (camPub?.track) setLocalVideoTrack(camPub.track);
+    }
   }, []);
 
   const toggleScreenShare = useCallback(async () => {
-    const r = roomRef.current;
-    if (!r) return;
-    const next = !r.localParticipant.isScreenShareEnabled;
-    await r.localParticipant.setScreenShareEnabled(next);
+    const room = roomRef.current;
+    if (!room) return;
+
+    const next = !room.localParticipant.isScreenShareEnabled;
+    await room.localParticipant.setScreenShareEnabled(next);
     setIsScreenSharing(next);
   }, []);
 
-  // ───────── DISCONNECT ─────────
   const disconnect = useCallback(async () => {
+    const pending = connectPromiseRef.current;
+    connectPromiseRef.current = null;
+
+    if (pending) {
+      try {
+        await pending;
+      } catch {}
+    }
+
     const room = roomRef.current;
     roomRef.current = null;
-    connectPromiseRef.current = null;
 
     if (room) {
       try {
@@ -241,16 +268,19 @@ export function useLiveKit() {
     setRemoteTracks({});
   }, []);
 
-  // cleanup
+  // CLEANUP
   useEffect(() => {
     return () => {
-      roomRef.current?.removeAllListeners();
-      roomRef.current?.disconnect().catch(() => {});
+      connectPromiseRef.current = null;
+      const room = roomRef.current;
+      roomRef.current = null;
+      room?.removeAllListeners();
+      room?.disconnect().catch(() => {});
     };
   }, []);
 
-  // extract single remote (1:1)
-  const remote = Object.values(remoteTracks)[0] || {};
+  // 🔥 Extract single remote (1:1 call)
+  const remoteParticipant = Object.values(remoteTracks)[0] || {};
 
   return {
     connect,
@@ -260,10 +290,10 @@ export function useLiveKit() {
     toggleScreenShare,
     connectionState,
     localVideoTrack,
-    remoteVideoTrack: remote.video || null,
-    remoteAudioTrack: remote.audio || null,
-    screenShareTrack: remote.screen || null,
-    screenShareAudioTrack: remote.screenAudio || null,
+    remoteVideoTrack: remoteParticipant.video || null,
+    remoteAudioTrack: remoteParticipant.audio || null,
+    screenShareTrack: remoteParticipant.screen || null,
+    screenShareAudioTrack: remoteParticipant.screenAudio || null,
     isMicOn,
     isCamOn,
     isScreenSharing,
