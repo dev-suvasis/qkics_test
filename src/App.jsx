@@ -153,7 +153,6 @@ function App() {
               <Route path="/post/:id/comments"          element={<Comments />} />
               <Route path="/book-session/:expertUuid"   element={<BookSession />} />
               <Route path="/book-session/investor/:investorUuid" element={<InvestorBookSession />} />
-              <Route path="/video-call/:call_room_id?" element={<VideoCallPage />} />
             </Route>
 
             {/* ── Expert only ───────────────────────────────────────────── */}
@@ -188,6 +187,13 @@ function App() {
               STANDALONE — no navbar, no guard
           ═══════════════════════════════════════════════════════════════ */}
           <Route path="/server-down"                    element={<ServerDown />} />
+
+          {/* ═══════════════════════════════════════════════════════════════
+              FULLSCREEN — no navbar, login required
+          ═══════════════════════════════════════════════════════════════ */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/video-call/:call_room_id?"    element={<VideoCallPage />} />
+          </Route>
 
           {/* ═══════════════════════════════════════════════════════════════
               ADMIN LAYOUT — AdminLayout handles its own auth + role guard

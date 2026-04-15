@@ -1,5 +1,19 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import {
+  FaMicrophone,
+  FaMicrophoneSlash,
+  FaVideo,
+  FaVideoSlash,
+  FaDesktop,
+  FaRegCommentDots,
+  FaRegStickyNote,
+  FaPaperPlane,
+  FaPaperclip,
+  FaPhoneSlash,
+  FaTimes,
+  FaCircle,
+} from "react-icons/fa";
 import { getAccessToken } from "../redux/store/tokenManager";
 import { useLiveKit } from "./hooks/useLiveKit";
 import { useCallChat } from "./hooks/useCallChat";
@@ -12,7 +26,6 @@ import {
   endCall,
 } from "./utils/callApi";
 
-// ── Main UI Component ─────────────────────────────────────
 export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
@@ -28,9 +41,10 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [remaining, setRemaining] = useState(null);
-  const [showNotes, setShowNotes] = useState(false);
+  const [activePanel, setActivePanel] = useState(null); // "chat" | "notes" | null
   const [note, setNote] = useState("");
   const [chatInput, setChatInput] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -73,7 +87,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   }, [call_room_id, lk.connect, chat.connect, lk.disconnect, chat.disconnect]);
 
   useEffect(() => {
-    if (!remaining) return;
+    if (remaining === null) return;
     timerRef.current = setInterval(() => {
       setRemaining((s) => {
         if (s <= 1) { clearInterval(timerRef.current); return 0; }
@@ -81,7 +95,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [remaining]);
+  }, [remaining === null]);
 
   useEffect(() => {
     const track = lk.localVideoTrack;
@@ -125,12 +139,19 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (activePanel !== "chat" && chat.messages.length > 0) {
+      setUnreadCount((c) => c + 1);
+    }
   }, [chat.messages]);
+
+  useEffect(() => {
+    if (activePanel === "chat") setUnreadCount(0);
+  }, [activePanel]);
 
   const handleEndCall = useCallback(async () => {
     lk.disconnect();
     chat.disconnect();
-    await endCall(call_room_id);   
+    await endCall(call_room_id);
     onCallEnd?.();
   }, [lk, chat, call_room_id, onCallEnd]);
 
@@ -155,127 +176,355 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
   const handleNoteSave = () => saveMyNote(call_room_id, note);
 
-  const fmt = (s) => (s || s === 0) ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "";
+  const fmt = (s) => {
+    if (s === null || s === undefined) return "";
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const mm = String(m).padStart(2, "0");
+    const ss = String(sec).padStart(2, "0");
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  };
 
   if (loading) return (
-    <div style={styles.center}>
-      <div style={styles.spinner} />
-      <p style={{ color: "#aaa", marginTop: 16 }}>Connecting...</p>
+    <div className="flex flex-col items-center justify-center h-screen bg-neutral-950 text-white">
+      <div className="w-12 h-12 rounded-full border-4 border-neutral-800 border-t-blue-500 animate-spin" />
+      <p className="mt-4 text-neutral-400 text-sm">Connecting to meeting…</p>
     </div>
   );
 
   if (error) return (
-    <div style={styles.center}>
-      <p style={{ color: "#ff4444" }}>{error}</p>
-      <button style={styles.btnRed} onClick={onCallEnd}>Leave</button>
+    <div className="flex flex-col items-center justify-center h-screen bg-neutral-950 text-white gap-4 px-6 text-center">
+      <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+        <FaPhoneSlash className="text-red-400 text-2xl" />
+      </div>
+      <p className="text-neutral-200">{error}</p>
+      <button
+        onClick={onCallEnd}
+        className="px-5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm transition"
+      >
+        Go back
+      </button>
     </div>
   );
 
+  const isTimerLow = remaining !== null && remaining < 120;
+
   return (
-    <div style={styles.root}>
-      <div style={styles.videoArea}>
-        {lk.screenShareTrack ? (
-          <video ref={screenRef} autoPlay playsInline style={styles.mainVideo} />
-        ) : lk.remoteVideoTrack ? (
-          <video ref={remoteRef} autoPlay playsInline style={styles.mainVideo} />
-        ) : (
-          <div style={styles.waiting}>
-            <p>{lk.isConnected ? "Dusre participant ka wait kar rahe hain..." : "Connecting..."}</p>
+    <div className="relative flex flex-col h-screen bg-neutral-950 text-white overflow-hidden">
+      {/* ── Top bar ── */}
+      <header className="flex items-center justify-between px-5 py-3 bg-neutral-900/80 backdrop-blur border-b border-neutral-800 z-20">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30">
+            <FaCircle className="text-red-500 text-[8px] animate-pulse" />
+            <span className="text-xs font-medium text-red-300">LIVE</span>
           </div>
-        )}
-        {lk.screenShareTrack && lk.remoteVideoTrack && (
-          <video ref={remoteRef} autoPlay playsInline style={{ ...styles.pip, bottom: 120, right: 12 }} />
-        )}
-        <video ref={localRef} autoPlay playsInline muted style={styles.pip} />
-        <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
-        <audio ref={screenAudioRef} autoPlay style={{ display: "none" }} />
-        {remaining !== null && <div style={{...styles.timer, color: remaining < 120 ? "#ff4444" : "#fff"}}>{fmt(remaining)}</div>}
-        {!lk.isConnected && <div style={styles.connecting}>Reconnecting...</div>}
-      </div>
-
-      <div style={styles.controls}>
-        <button style={lk.isMicOn ? styles.btn : styles.btnOff} onClick={lk.toggleMic}>{lk.isMicOn ? "🎤 Mute" : "🔇 Unmute"}</button>
-        <button style={lk.isCamOn ? styles.btn : styles.btnOff} onClick={lk.toggleCamera}>{lk.isCamOn ? "📷 Cam Off" : "📷 Cam On"}</button>
-        <button style={lk.isScreenSharing ? styles.btnOff : styles.btn} onClick={lk.toggleScreenShare}>{lk.isScreenSharing ? "🖥 Stop Share" : "🖥 Share Screen"}</button>
-        <button style={showNotes ? styles.btnOff : styles.btn} onClick={() => setShowNotes(!showNotes)}>📝 Notes</button>
-        <button style={styles.btnRed} onClick={handleEndCall}>📵 End Call</button>
-      </div>
-
-      <div style={styles.bottom}>
-        <div style={styles.chatPanel}>
-          <div style={styles.panelHeader}>In-Call Chat</div>
-          <div style={styles.messages}>
-            {chat.messages.map((m, i) => (
-              <div key={m.id || i} style={styles.msg}>
-                <span style={styles.msgUser}>{m.senderUsername}:</span>
-                {m.isFile ? <a href={m.fileUrl} target="_blank" rel="noreferrer" style={styles.fileLink}> {m.fileName}</a> : <span style={styles.msgText}> {m.text}</span>}
-              </div>
-            ))}
-            {chat.isTyping && <div style={{ color: "#888", fontSize: 12, fontStyle: "italic" }}>Typing...</div>}
-            <div ref={chatEndRef} />
-          </div>
-          <form onSubmit={handleSend} style={styles.chatForm}>
-            <input value={chatInput} onChange={(e) => {setChatInput(e.target.value); chat.sendTyping(e.target.value.length > 0);}} onBlur={() => chat.sendTyping(false)} placeholder="Message..." style={styles.chatInput} />
-            <button type="submit" style={styles.btnSend}>Send</button>
-            <button type="button" style={styles.btnFile} onClick={() => fileRef.current?.click()}>File</button>
-            <input ref={fileRef} type="file" style={{ display: "none" }} onChange={handleFile} />
-          </form>
+          <h1 className="text-sm font-medium text-neutral-200">Meeting in progress</h1>
         </div>
-        {showNotes && (
-          <div style={styles.notesPanel}>
-            <div style={styles.panelHeader}>My Private Notes</div>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} onBlur={handleNoteSave} placeholder="Sirf aap dekh sakte ho..." style={styles.noteArea} />
-            <button style={styles.btnGreen} onClick={handleNoteSave}>Save</button>
+        <div className="flex items-center gap-4">
+          {remaining !== null && (
+            <div
+              className={`px-3 py-1 rounded-md font-mono text-sm tabular-nums ${
+                isTimerLow
+                  ? "bg-red-500/15 text-red-300 border border-red-500/30"
+                  : "bg-neutral-800 text-neutral-200"
+              }`}
+            >
+              {fmt(remaining)}
+            </div>
+          )}
+          <span
+            className={`text-xs px-2 py-1 rounded ${
+              lk.isConnected ? "text-emerald-400 bg-emerald-500/10" : "text-amber-400 bg-amber-500/10"
+            }`}
+          >
+            {lk.isConnected ? "Connected" : "Reconnecting…"}
+          </span>
+        </div>
+      </header>
+
+      {/* ── Stage ── */}
+      <div className="flex-1 flex overflow-hidden">
+        <section className="relative flex-1 bg-black">
+          {lk.screenShareTrack ? (
+            <video
+              ref={screenRef}
+              autoPlay
+              playsInline
+              className="absolute inset-0 w-full h-full object-contain bg-black"
+            />
+          ) : lk.remoteVideoTrack ? (
+            <video
+              ref={remoteRef}
+              autoPlay
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-500 gap-3">
+              <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">
+                <FaVideo className="text-2xl text-neutral-600" />
+              </div>
+              <p className="text-sm">
+                {lk.isConnected ? "Waiting for the other participant to join…" : "Connecting…"}
+              </p>
+            </div>
+          )}
+
+          {/* Remote PiP when screen-share is on */}
+          {lk.screenShareTrack && lk.remoteVideoTrack && (
+            <video
+              ref={remoteRef}
+              autoPlay
+              playsInline
+              className="absolute bottom-36 right-4 w-40 h-28 object-cover rounded-lg border border-neutral-700 shadow-xl"
+            />
+          )}
+
+          {/* Self PiP */}
+          <div className="absolute bottom-24 right-4 w-44 h-28 rounded-lg overflow-hidden border border-neutral-700 shadow-xl bg-neutral-800">
+            {lk.isCamOn && lk.localVideoTrack ? (
+              <video
+                ref={localRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-neutral-900">
+                <FaVideoSlash className="text-neutral-600 text-xl" />
+              </div>
+            )}
+            <span className="absolute bottom-1 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/60">
+              You
+            </span>
           </div>
+
+          {/* Hidden audio sinks */}
+          <audio ref={remoteAudioRef} autoPlay className="hidden" />
+          <audio ref={screenAudioRef} autoPlay className="hidden" />
+        </section>
+
+        {/* ── Side panel ── */}
+        {activePanel && (
+          <aside className="w-[360px] bg-neutral-900 border-l border-neutral-800 flex flex-col z-10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setActivePanel("chat")}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                    activePanel === "chat"
+                      ? "bg-neutral-800 text-white"
+                      : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => setActivePanel("notes")}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                    activePanel === "notes"
+                      ? "bg-neutral-800 text-white"
+                      : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                >
+                  My Notes
+                </button>
+              </div>
+              <button
+                onClick={() => setActivePanel(null)}
+                className="p-2 text-neutral-400 hover:text-white rounded-md hover:bg-neutral-800 transition"
+              >
+                <FaTimes className="text-xs" />
+              </button>
+            </div>
+
+            {activePanel === "chat" && (
+              <>
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                  {chat.messages.length === 0 && (
+                    <p className="text-center text-xs text-neutral-500 mt-8">
+                      No messages yet. Start the conversation.
+                    </p>
+                  )}
+                  {chat.messages.map((m, i) => (
+                    <div key={m.id || i} className="flex flex-col">
+                      <span className="text-xs font-medium text-blue-400">{m.senderUsername}</span>
+                      {m.isFile ? (
+                        <a
+                          href={m.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-emerald-400 hover:underline break-all"
+                        >
+                          <FaPaperclip className="inline mr-1 text-xs" />
+                          {m.fileName}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-neutral-200 whitespace-pre-wrap break-words">
+                          {m.text}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {chat.isTyping && (
+                    <div className="text-xs text-neutral-500 italic">Typing…</div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                <form
+                  onSubmit={handleSend}
+                  className="flex items-center gap-2 px-3 py-3 border-t border-neutral-800"
+                >
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="p-2 text-neutral-400 hover:text-white rounded-md hover:bg-neutral-800 transition"
+                    title="Attach file"
+                  >
+                    <FaPaperclip />
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFile}
+                  />
+                  <input
+                    value={chatInput}
+                    onChange={(e) => {
+                      setChatInput(e.target.value);
+                      chat.sendTyping(e.target.value.length > 0);
+                    }}
+                    onBlur={() => chat.sendTyping(false)}
+                    placeholder="Type a message"
+                    className="flex-1 bg-neutral-800 border border-neutral-700 focus:border-blue-500 focus:outline-none rounded-md px-3 py-2 text-sm placeholder-neutral-500"
+                  />
+                  <button
+                    type="submit"
+                    className="p-2 text-white bg-blue-600 hover:bg-blue-500 rounded-md transition disabled:opacity-40"
+                    disabled={!chatInput.trim()}
+                  >
+                    <FaPaperPlane className="text-sm" />
+                  </button>
+                </form>
+              </>
+            )}
+
+            {activePanel === "notes" && (
+              <div className="flex-1 flex flex-col p-4 gap-3">
+                <p className="text-[11px] text-neutral-500 uppercase tracking-wide">
+                  Private — only you can see these
+                </p>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onBlur={handleNoteSave}
+                  placeholder="Write your notes here…"
+                  className="flex-1 bg-neutral-950 border border-neutral-800 focus:border-blue-500 focus:outline-none rounded-md p-3 text-sm placeholder-neutral-600 text-neutral-200 resize-none"
+                />
+                <button
+                  onClick={handleNoteSave}
+                  className="py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-sm font-medium transition"
+                >
+                  Save note
+                </button>
+              </div>
+            )}
+          </aside>
         )}
+      </div>
+
+      {/* ── Floating toolbar ── */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30">
+        <div className="flex items-center gap-1.5 bg-neutral-900/95 backdrop-blur-md border border-neutral-800 rounded-full px-2 py-2 shadow-2xl">
+          <ToolbarButton
+            onClick={lk.toggleMic}
+            active={lk.isMicOn}
+            icon={lk.isMicOn ? <FaMicrophone /> : <FaMicrophoneSlash />}
+            label={lk.isMicOn ? "Mute" : "Unmute"}
+          />
+          <ToolbarButton
+            onClick={lk.toggleCamera}
+            active={lk.isCamOn}
+            icon={lk.isCamOn ? <FaVideo /> : <FaVideoSlash />}
+            label={lk.isCamOn ? "Stop video" : "Start video"}
+          />
+          <ToolbarButton
+            onClick={lk.toggleScreenShare}
+            highlight={lk.isScreenSharing}
+            icon={<FaDesktop />}
+            label={lk.isScreenSharing ? "Stop share" : "Share"}
+          />
+          <ToolbarButton
+            onClick={() => setActivePanel(activePanel === "chat" ? null : "chat")}
+            highlight={activePanel === "chat"}
+            icon={<FaRegCommentDots />}
+            label="Chat"
+            badge={unreadCount}
+          />
+          <ToolbarButton
+            onClick={() => setActivePanel(activePanel === "notes" ? null : "notes")}
+            highlight={activePanel === "notes"}
+            icon={<FaRegStickyNote />}
+            label="Notes"
+          />
+
+          <div className="w-px h-8 bg-neutral-800 mx-1" />
+
+          <button
+            onClick={handleEndCall}
+            className="flex items-center gap-2 px-4 h-12 rounded-full bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-500/20"
+            title="End call"
+          >
+            <FaPhoneSlash className="text-base" />
+            <span className="text-sm font-medium">End</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-const styles = {
-  root: { display: "flex", flexDirection: "column", height: "100vh", background: "#0d0d0d", color: "#fff", fontFamily: "sans-serif" },
-  center: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0d0d0d", color: "#fff" },
-  spinner: { width: 40, height: 40, border: "3px solid #333", borderTop: "3px solid #4da6ff", borderRadius: "50%", animation: "spin 1s linear infinite" },
-  videoArea: { position: "relative", flex: 1, background: "#111", overflow: "hidden" },
-  mainVideo: { width: "100%", height: "100%", objectFit: "cover" },
-  waiting: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 16 },
-  pip: { position: "absolute", bottom: 12, right: 12, width: 160, height: 100, objectFit: "cover", borderRadius: 8, border: "2px solid #333" },
-  timer: { position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.6)", padding: "4px 12px", borderRadius: 6, fontSize: 18, fontWeight: 500 },
-  connecting: { position: "absolute", top: 12, left: 12, background: "rgba(255,165,0,0.8)", color: "#000", padding: "4px 12px", borderRadius: 6, fontSize: 12 },
-  controls: { display: "flex", gap: 8, padding: "10px 16px", background: "#111", justifyContent: "center", borderTop: "1px solid #222", flexWrap: "wrap" },
-  btn: { padding: "8px 16px", borderRadius: 6, border: "none", background: "#2a2a2a", color: "#fff", cursor: "pointer", fontSize: 13 },
-  btnOff: { padding: "8px 16px", borderRadius: 6, border: "none", background: "#444", color: "#aaa", cursor: "pointer", fontSize: 13 },
-  btnRed: { padding: "8px 16px", borderRadius: 6, border: "none", background: "#c0392b", color: "#fff", cursor: "pointer", fontSize: 13 },
-  btnSend: { padding: "7px 14px", borderRadius: 6, border: "none", background: "#1a6ee0", color: "#fff", cursor: "pointer", fontSize: 13 },
-  btnFile: { padding: "7px 12px", borderRadius: 6, border: "1px solid #444", background: "transparent", color: "#aaa", cursor: "pointer", fontSize: 13 },
-  btnGreen: { padding: "8px", borderRadius: 6, border: "none", background: "#1d6a44", color: "#fff", cursor: "pointer", fontSize: 13, marginTop: 8 },
-  bottom: { display: "flex", height: 240, background: "#0d0d0d", borderTop: "1px solid #1a1a1a" },
-  chatPanel: { flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid #1a1a1a" },
-  notesPanel: { width: 280, display: "flex", flexDirection: "column", padding: 10 },
-  panelHeader: { padding: "5px 12px", fontSize: 11, color: "#555", letterSpacing: 1, borderBottom: "1px solid #1a1a1a", textTransform: "uppercase" },
-  messages: { flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 4 },
-  msg: { fontSize: 13, lineHeight: 1.5 },
-  msgUser: { color: "#4da6ff", fontWeight: 500 },
-  msgText: { color: "#ccc" },
-  fileLink: { color: "#63d9a0", textDecoration: "underline" },
-  chatForm: { display: "flex", gap: 6, padding: "8px 10px", borderTop: "1px solid #1a1a1a" },
-  chatInput: { flex: 1, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, color: "#fff", padding: "6px 10px", fontSize: 13, outline: "none" },
-  noteArea: { flex: 1, background: "#111", border: "1px solid #2a2a2a", borderRadius: 6, color: "#ccc", padding: 8, fontSize: 13, resize: "none", outline: "none" },
-};
+function ToolbarButton({ onClick, active = true, highlight = false, icon, label, badge = 0 }) {
+  const base = "relative flex flex-col items-center justify-center w-14 h-12 rounded-full transition text-[10px] gap-0.5";
+  const style = highlight
+    ? "bg-blue-600 hover:bg-blue-500 text-white"
+    : active
+    ? "bg-neutral-800 hover:bg-neutral-700 text-white"
+    : "bg-red-600/90 hover:bg-red-500 text-white";
+  return (
+    <button onClick={onClick} className={`${base} ${style}`} title={label}>
+      <span className="text-base">{icon}</span>
+      {badge > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-semibold flex items-center justify-center">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
+    </button>
+  );
+}
 
-// ── Page Wrapper ──────────────────────────────────────────
 export function VideoCallPage() {
   const { call_room_id } = useParams();
   const navigate = useNavigate();
   const token = getAccessToken();
 
   if (!token) {
-    return <div style={styles.center}>Session expired. Please login again.</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-neutral-950 text-white">
+        Session expired. Please login again.
+      </div>
+    );
   }
 
   if (!call_room_id) {
-    return <div style={styles.center}>Call session ID was not found. Please join from your bookings.</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-neutral-950 text-white">
+        Call session ID was not found. Please join from your bookings.
+      </div>
+    );
   }
 
   return (
