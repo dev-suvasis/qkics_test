@@ -81,12 +81,32 @@ export function useLiveKit() {
         }
       });
 
+      const absorbExistingTracks = (participant) => {
+        participant.tracks.forEach((publication) => {
+          if (!publication.isSubscribed) {
+            try { publication.setSubscribed(true); } catch { /* ignore */ }
+          }
+          const track = publication.track;
+          if (!track) return;
+          if (publication.source === Track.Source.Camera) setRemoteVideoTrack(track);
+          else if (publication.source === Track.Source.Microphone) setRemoteAudioTrack(track);
+          else if (publication.source === Track.Source.ScreenShare) setScreenShareTrack(track);
+          else if (publication.source === Track.Source.ScreenShareAudio) setScreenShareAudioTrack(track);
+        });
+      };
+
+      room.on(RoomEvent.ParticipantConnected, (participant) => {
+        absorbExistingTracks(participant);
+      });
+
       try {
         await room.connect(livekitUrl.trim(), livekitToken.trim());
         await room.localParticipant.enableCameraAndMicrophone();
 
         const camPub = room.localParticipant.getTrack(Track.Source.Camera);
         if (camPub?.track) setLocalVideoTrack(camPub.track);
+
+        room.participants.forEach(absorbExistingTracks);
 
         roomRef.current = room;
         setIsMicOn(room.localParticipant.isMicrophoneEnabled);
