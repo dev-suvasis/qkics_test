@@ -28,7 +28,7 @@ export async function uploadCallFile(call_room_id, file) {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return res.data;
-}
+}  
 
 export async function getMyNote(call_room_id) {
   try {
