@@ -88,7 +88,7 @@ export function useLiveKit() {
   // Sync all tracks from all existing remote participants
   const syncExistingParticipants = useCallback((room) => {
     room.remoteParticipants.forEach((participant) => {
-      participant.trackPublications.forEach((publication) => {
+      participant.trackPublications?.forEach((publication) => {
         if (!publication.isSubscribed) {
           try {
             publication.setSubscribed(true);
@@ -140,7 +140,7 @@ export function useLiveKit() {
         console.log("ParticipantConnected:", participant.identity);
 
         // Subscribe to any tracks the participant already has
-        participant.trackPublications.forEach((publication) => {
+        participant.trackPublications?.forEach((publication) => {
           if (!publication.isSubscribed) {
             try {
               publication.setSubscribed(true);
@@ -183,10 +183,23 @@ export function useLiveKit() {
       try {
         await room.connect(livekitUrl.trim(), livekitToken.trim());
 
-        await room.localParticipant.enableCameraAndMicrophone();
+        try {
+          await room.localParticipant.setCameraEnabled(true);
+          const camPub = room.localParticipant.getTrack(Track.Source.Camera);
+          if (camPub?.track) setLocalVideoTrack(camPub.track);
+          setIsCamOn(true);
+        } catch (camErr) {
+          console.warn("Camera failed or not found:", camErr);
+          setIsCamOn(false);
+        }
 
-        const camPub = room.localParticipant.getTrack(Track.Source.Camera);
-        if (camPub?.track) setLocalVideoTrack(camPub.track);
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true);
+          setIsMicOn(true);
+        } catch (micErr) {
+          console.warn("Microphone failed or not found:", micErr);
+          setIsMicOn(false);
+        }
 
         roomRef.current = room;
 
