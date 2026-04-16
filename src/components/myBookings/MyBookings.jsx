@@ -74,7 +74,7 @@ export default function MyBookings() {
         }
       });
 
-      const sorted = Array.from(uniqueMap.values()).sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
+      const sorted = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.start_datetime) - new Date(a.start_datetime));
       setBookings(sorted);
     } catch (err) {
       console.error(err);
