@@ -87,12 +87,12 @@ export function useLiveKit() {
 
   // Sync all tracks from all existing remote participants
   const syncExistingParticipants = useCallback((room) => {
-    room.remoteParticipants.forEach((participant) => {
+    room.remoteParticipants?.forEach((participant) => {
       participant.trackPublications?.forEach((publication) => {
         if (!publication.isSubscribed) {
           try {
             publication.setSubscribed(true);
-          } catch { /* subscription may already be in progress */ }
+          } catch { /* subscription in progress */ }
         }
         if (publication.track) {
           routeTrackIn(publication.track, participant);
