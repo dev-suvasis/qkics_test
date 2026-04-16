@@ -26,11 +26,50 @@ import {
   endCall,
 } from "./utils/callApi";
 
+/**
+ * Enhanced Video Renderer that handles orientation and aspect ratios safely.
+ * Prevents stretching, cropping, and rotation issues in cross-platform calls.
+ */
+function SafeVideoRenderer({ track, isLocal = false, isScreen = false, className = "" }) {
+  const videoRef = useRef(null);
+  // eslint-disable-next-line no-unused-vars
+  const [isPortrait, setIsPortrait] = useState(false);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!track || !el) return;
+
+    track.attach(el);
+
+    if (track.dimensions) {
+      setIsPortrait(track.dimensions.height > track.dimensions.width);
+    }
+
+    const handleDimensions = (dims) => {
+      setIsPortrait(dims.height > dims.width);
+    };
+    
+    track.on("dimensionsChanged", handleDimensions);
+    return () => {
+      track.off("dimensionsChanged", handleDimensions);
+      track.detach(el);
+    };
+  }, [track]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={isLocal}
+      style={{ objectFit: isScreen ? "contain" : (isLocal ? "cover" : "contain") }}
+      className={`w-full h-full bg-black/40 transition-opacity duration-300 ${className}`}
+    />
+  );
+}
+
 export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
-  const localRef = useRef(null);
-  const remoteRef = useRef(null);
   const remoteAudioRef = useRef(null);
-  const screenRef = useRef(null);
   const screenAudioRef = useRef(null);
   const chatEndRef = useRef(null);
   const fileRef = useRef(null);
@@ -108,36 +147,12 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   }, [remaining === null]);
 
   useEffect(() => {
-    const track = lk.localVideoTrack;
-    const el = localRef.current;
-    if (!track || !el) return;
-    track.attach(el);
-    return () => { track.detach(el); };
-  }, [lk.localVideoTrack]);
-
-  useEffect(() => {
-    const track = lk.remoteVideoTrack;
-    const el = remoteRef.current;
-    if (!track || !el) return;
-    track.attach(el);
-    return () => { track.detach(el); };
-  }, [lk.remoteVideoTrack]);
-
-  useEffect(() => {
     const track = lk.remoteAudioTrack;
     const el = remoteAudioRef.current;
     if (!track || !el) return;
     track.attach(el);
     return () => { track.detach(el); };
   }, [lk.remoteAudioTrack]);
-
-  useEffect(() => {
-    const track = lk.screenShareTrack;
-    const el = screenRef.current;
-    if (!track || !el) return;
-    track.attach(el);
-    return () => { track.detach(el); };
-  }, [lk.screenShareTrack]);
 
   useEffect(() => {
     const track = lk.screenShareAudioTrack;
@@ -250,21 +265,18 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
       {/* ── Stage ── */}
       <div className="flex-1 flex overflow-hidden">
-        <section className="relative flex-1 bg-black">
+        <section className="relative flex-1 bg-black flex items-center justify-center">
           {lk.screenShareTrack ? (
-            <video
-              ref={screenRef}
-              autoPlay
-              playsInline
-              className="absolute inset-0 w-full h-full object-contain bg-black"
-            />
+            <SafeVideoRenderer track={lk.screenShareTrack} isScreen={true} />
           ) : lk.remoteVideoTrack ? (
-            <video
-              ref={remoteRef}
-              autoPlay
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <div className="relative w-full h-full flex items-center justify-center">
+              <SafeVideoRenderer track={lk.remoteVideoTrack} />
+              {lk.remoteName && (
+                <div className="absolute top-4 left-4 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur-md border border-white/10 text-xs font-bold tracking-wide animate-fadeIn">
+                  {lk.remoteName}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-500 gap-3">
               <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">
@@ -276,26 +288,17 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             </div>
           )}
 
-          {/* Remote PiP when screen-share is on */}
+          {/* Remote Side-PiP (Visible when screen sharing) */}
           {lk.screenShareTrack && lk.remoteVideoTrack && (
-            <video
-              ref={remoteRef}
-              autoPlay
-              playsInline
-              className="absolute bottom-32 sm:bottom-40 right-2 sm:right-4 w-24 h-16 sm:w-40 sm:h-28 object-cover rounded-lg border border-neutral-700 shadow-xl"
-            />
+            <div className="absolute bottom-32 sm:bottom-40 right-2 sm:right-4 w-28 sm:w-48 aspect-video rounded-lg overflow-hidden border border-neutral-700 shadow-2xl z-20">
+              <SafeVideoRenderer track={lk.remoteVideoTrack} />
+            </div>
           )}
 
           {/* Self PiP */}
-          <div className="absolute bottom-20 sm:bottom-24 right-2 sm:right-4 w-24 h-16 sm:w-44 sm:h-28 rounded-lg overflow-hidden border border-neutral-700 shadow-xl bg-neutral-800">
+          <div className="absolute bottom-20 sm:bottom-24 right-2 sm:right-4 w-24 sm:w-44 aspect-video rounded-lg overflow-hidden border border-neutral-700 shadow-xl bg-neutral-800">
             {lk.isCamOn && lk.localVideoTrack ? (
-              <video
-                ref={localRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
+              <SafeVideoRenderer track={lk.localVideoTrack} isLocal={true} />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-neutral-900">
                 <FaVideoSlash className="text-neutral-600 text-lg sm:text-xl" />
@@ -389,7 +392,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
                 </div>
                 <form
                   onSubmit={handleSend}
-                  className="flex items-center gap-2 px-3 py-3 border-t border-neutral-800"
+                  className="flex items-center gap-2 px-3 pt-3 pb-24 sm:pb-3 border-t border-neutral-800"
                 >
                   <button
                     type="button"
@@ -427,7 +430,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             )}
 
             {activePanel === "notes" && (
-              <div className="flex-1 flex flex-col p-4 gap-3">
+              <div className="flex-1 flex flex-col p-4 gap-3 pb-24 sm:pb-4">
                 <p className="text-[11px] text-neutral-500 uppercase tracking-wide">
                   Private — only you can see these
                 </p>

@@ -280,7 +280,8 @@ export function useLiveKit() {
   }, []);
 
   // 🔥 Extract single remote (1:1 call)
-  const remoteParticipant = Object.values(remoteTracks)[0] || {};
+  const remoteId = Object.keys(remoteTracks)[0];
+  const remoteParticipant = remoteTracks[remoteId] || {};
 
   return {
     connect,
@@ -294,6 +295,7 @@ export function useLiveKit() {
     remoteAudioTrack: remoteParticipant.audio || null,
     screenShareTrack: remoteParticipant.screen || null,
     screenShareAudioTrack: remoteParticipant.screenAudio || null,
+    remoteName: remoteId || null,
     isMicOn,
     isCamOn,
     isScreenSharing,
