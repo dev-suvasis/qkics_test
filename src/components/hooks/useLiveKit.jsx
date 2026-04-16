@@ -185,7 +185,7 @@ export function useLiveKit() {
 
         await room.localParticipant.enableCameraAndMicrophone();
 
-        const camPub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+        const camPub = room.localParticipant.getTrack(Track.Source.Camera);
         if (camPub?.track) setLocalVideoTrack(camPub.track);
 
         roomRef.current = room;
