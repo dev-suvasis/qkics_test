@@ -36,15 +36,45 @@ export default function MyBookings() {
       setLoading(true);
       setError("");
 
-      let url = "";
+      let combinedData = [];
+
       if (activeTab === "expert") {
-        url = user.user_type === "expert" ? "/v1/bookings/?as_expert=true" : "/v1/bookings/";  
+        if (user.user_type === "expert") {
+          const [resExp, resCli] = await Promise.all([
+            axiosSecure.get("/v1/bookings/?as_expert=true"),
+            axiosSecure.get("/v1/bookings/")
+          ]);
+          const conducting = (Array.isArray(resExp.data) ? resExp.data : (resExp.data?.results || [])).map(b => ({ ...b, _role: "conducting" }));
+          const attending = (Array.isArray(resCli.data) ? resCli.data : (resCli.data?.results || [])).map(b => ({ ...b, _role: "attending" }));
+          combinedData = [...conducting, ...attending];
+        } else {
+          const res = await axiosSecure.get("/v1/bookings/");
+          combinedData = (Array.isArray(res.data) ? res.data : (res.data?.results || [])).map(b => ({ ...b, _role: "attending" }));
+        }
       } else {
-        url = user.user_type === "investor" ? "/v1/bookings/investor-bookings/list/?as_investor=true" : "/v1/bookings/investor-bookings/list/";
+        if (user.user_type === "investor") {
+          const [resInv, resCli] = await Promise.all([
+            axiosSecure.get("/v1/bookings/investor-bookings/list/?as_investor=true"),
+            axiosSecure.get("/v1/bookings/investor-bookings/list/")
+          ]);
+          const conducting = (Array.isArray(resInv.data) ? resInv.data : (resInv.data?.results || [])).map(b => ({ ...b, _role: "conducting" }));
+          const attending = (Array.isArray(resCli.data) ? resCli.data : (resCli.data?.results || [])).map(b => ({ ...b, _role: "attending" }));
+          combinedData = [...conducting, ...attending];
+        } else {
+          const res = await axiosSecure.get("/v1/bookings/investor-bookings/list/");
+          combinedData = (Array.isArray(res.data) ? res.data : (res.data?.results || [])).map(b => ({ ...b, _role: "attending" }));
+        }
       }
 
-      const res = await axiosSecure.get(url);
-      const sorted = [...res.data].sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
+      // Deduplicate by UUID
+      const uniqueMap = new Map();
+      combinedData.forEach(item => {
+        if (!uniqueMap.has(item.uuid)) {
+          uniqueMap.set(item.uuid, item);
+        }
+      });
+
+      const sorted = Array.from(uniqueMap.values()).sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime));
       setBookings(sorted);
     } catch (err) {
       console.error(err);
@@ -157,9 +187,9 @@ export default function MyBookings() {
 
               let otherPersonName = "";
               if (activeTab === "expert") {
-                otherPersonName = user.user_type === "expert" ? booking.user_name : booking.expert_name;
+                otherPersonName = booking._role === "conducting" ? booking.user_name : booking.expert_name;
               } else {
-                otherPersonName = user.user_type === "investor" ? booking.user_name : booking.investor_name;
+                otherPersonName = booking._role === "conducting" ? booking.user_name : booking.investor_name;
               }
 
               return (
@@ -179,6 +209,16 @@ export default function MyBookings() {
                         <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] uppercase font-black tracking-widest border shadow-sm transition-all duration-500 ${status.color}`}>
                           {status.label}
                         </span>
+                        {booking._role === "attending" && (
+                           <span className={`ml-2 inline-block px-3 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border border-red-500/20 bg-red-500/5 text-red-500`}>
+                             My Booking
+                           </span>
+                        )}
+                        {booking._role === "conducting" && (
+                           <span className={`ml-2 inline-block px-3 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border border-purple-500/20 bg-purple-500/5 text-purple-500`}>
+                             My Session
+                           </span>
+                        )}
                       </div>
                     </div>
                   </div>
