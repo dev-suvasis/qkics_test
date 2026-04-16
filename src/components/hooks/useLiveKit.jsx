@@ -32,6 +32,7 @@ export function useLiveKit() {
     setRemoteTracks((prev) => {
       // Clone to avoid mutating previous state
       const user = { ...(prev[id] || {}) };
+      user.name = participant.name || participant.identity;
 
       const src = track.source;
       const isScreen =
@@ -139,16 +140,24 @@ export function useLiveKit() {
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         console.log("ParticipantConnected:", participant.identity);
 
-        // Subscribe to any tracks the participant already has
         participant.trackPublications?.forEach((publication) => {
           if (!publication.isSubscribed) {
             try {
               publication.setSubscribed(true);
-            } catch { /* subscription may already be in progress */ }
+            } catch { /* subscription in progress */ }
           }
           if (publication.track) {
             routeTrackIn(publication.track, participant);
           }
+        });
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        console.log("ParticipantDisconnected:", participant.identity);
+        setRemoteTracks((prev) => {
+          const updated = { ...prev };
+          delete updated[participant.identity];
+          return updated;
         });
       });
 
@@ -309,7 +318,7 @@ export function useLiveKit() {
     remoteAudioTrack: remoteParticipant.audio || null,
     screenShareTrack: remoteParticipant.screen || null,
     screenShareAudioTrack: remoteParticipant.screenAudio || null,
-    remoteName: remoteId || null,
+    remoteName: remoteParticipant.name || remoteId || null,
     isMicOn,
     isCamOn,
     isScreenSharing,
