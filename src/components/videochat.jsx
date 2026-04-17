@@ -138,6 +138,26 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
     };
   }, [call_room_id, lk.connect, chat.connect, lk.disconnect, chat.disconnect]);
 
+  const [isEnding, setIsEnding] = useState(false);
+
+  const handleEndCall = useCallback(async () => {
+    setIsEnding(true);
+    try {
+      await lk.disconnect().catch(() => {});
+      await chat.disconnect().catch(() => {});
+      // Allow endCall to fail quietly if the room is already gone
+      await endCall(call_room_id).catch(() => {});
+    } finally {
+      // Force navigation back to bookings no matter what
+      onCallEnd?.();
+    }
+  }, [lk, chat, call_room_id, onCallEnd]);
+
+  const triggerEndCall = () => {
+    if (isEnding) return;
+    setShowEndConfirm(true);
+  };
+
   useEffect(() => {
     if (remaining === null) return;
     timerRef.current = setInterval(() => {
@@ -173,25 +193,6 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat.messages]);
 
-  const [isEnding, setIsEnding] = useState(false);
-
-  const handleEndCall = useCallback(async () => {
-    setIsEnding(true);
-    try {
-      await lk.disconnect().catch(() => {});
-      await chat.disconnect().catch(() => {});
-      // Allow endCall to fail quietly if the room is already gone
-      await endCall(call_room_id).catch(() => {});
-    } finally {
-      // Force navigation back to bookings no matter what
-      onCallEnd?.();
-    }
-  }, [lk, chat, call_room_id, onCallEnd]);
-
-  const triggerEndCall = () => {
-    if (isEnding) return;
-    setShowEndConfirm(true);
-  };
 
   const handleSend = (e) => {
     e.preventDefault();
