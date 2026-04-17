@@ -116,7 +116,10 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
         const history = await getCallMessages(call_room_id);
         const noteData = await getMyNote(call_room_id);
         setNote(noteData.content || "");
-        await lk.connect(roomData.livekit_url, roomData.livekit_token);
+        await lk.connect(roomData.livekit_url, roomData.livekit_token, () => {
+          // Participant left - auto end call
+          handleEndCall();
+        });
         chat.connect(history);
         if (roomData.scheduled_end) {
           const secs = Math.max(
@@ -263,6 +266,9 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
           </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="hidden md:block text-[10px] text-neutral-500 uppercase font-bold tracking-tighter mr-2">
+            Dynamic Sync Timer (Local Reference)
+          </div>
           {remaining !== null && remaining <= 60 && remaining > 0 && (
             <div className="animate-bounce px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-[10px] sm:text-xs text-amber-300 font-bold uppercase tracking-wider">
               The meeting will be end soon
@@ -504,7 +510,16 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
                 if (err.name === "NotAllowedError" || err.message?.includes("Permission denied")) {
                   return;
                 }
-                alert("Screen sharing failed: It may be unsupported on this device or blocked by your browser settings.");
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isNotSecure = window.location.protocol !== "https:" && window.location.hostname !== "localhost";
+
+                if (isIOS) {
+                  alert("Apple blocks screen sharing in iOS browsers for privacy. Please use a desktop to share your screen.");
+                } else if (isNotSecure) {
+                  alert("Screen sharing requires a secure (HTTPS) connection. Please ensure you're using a secure link.");
+                } else {
+                  alert("Screen sharing failed: This may be blocked by your browser permissions or the OS.");
+                }
               }
             }}
             highlight={lk.isScreenSharing}

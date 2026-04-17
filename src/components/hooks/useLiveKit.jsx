@@ -110,7 +110,7 @@ export function useLiveKit() {
   }, [routeTrackIn]);
 
   // ───────── CONNECT ─────────
-  const connect = useCallback(async (livekitUrl, livekitToken) => {
+  const connect = useCallback(async (livekitUrl, livekitToken, onRemoteLeave) => {
     if (connectPromiseRef.current) return connectPromiseRef.current;
 
     const promise = (async () => {
@@ -166,6 +166,11 @@ export function useLiveKit() {
           delete updated[participant.identity];
           return updated;
         });
+        
+        // If the 1:1 partner leaves, notify the component
+        if (room.remoteParticipants.size === 0) {
+          onRemoteLeave?.();
+        }
       });
 
       // LOCAL TRACKS
