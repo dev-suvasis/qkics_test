@@ -82,6 +82,8 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [remaining, setRemaining] = useState(null);
+  const [scheduledEnd, setScheduledEnd] = useState(null);
+  const [hasRemoteJoined, setHasRemoteJoined] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // "chat" | "notes" | null
   const [note, setNote] = useState("");
   const [chatInput, setChatInput] = useState("");
@@ -116,17 +118,10 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
         const history = await getCallMessages(call_room_id);
         const noteData = await getMyNote(call_room_id);
         setNote(noteData.content || "");
-        await lk.connect(roomData.livekit_url, roomData.livekit_token, () => {
-          // Participant left - auto end call
-          handleEndCall();
-        });
+        await lk.connect(roomData.livekit_url, roomData.livekit_token);
         chat.connect(history);
         if (roomData.scheduled_end) {
-          const secs = Math.max(
-            0,
-            Math.floor((new Date(roomData.scheduled_end).getTime() - Date.now()) / 1000)
-          );
-          setRemaining(secs);
+          setScheduledEnd(new Date(roomData.scheduled_end).getTime());
         }
         setLoading(false);
       } catch (e) {
@@ -161,20 +156,32 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
     setShowEndConfirm(true);
   };
 
+  // ───────── Synced Timer (Drift-free) ─────────
   useEffect(() => {
-    if (remaining === null) return;
-    timerRef.current = setInterval(() => {
-      setRemaining((s) => {
-        if (s <= 0) {
-          clearInterval(timerRef.current);
-          handleEndCall();
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [remaining === null, handleEndCall]);
+    if (!scheduledEnd) return;
+    const tick = () => {
+      const now = Date.now();
+      const left = Math.max(0, Math.floor((scheduledEnd - now) / 1000));
+      setRemaining(left);
+      if (left <= 0 && !isEnding) {
+        handleEndCall();
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [scheduledEnd, handleEndCall, isEnding]);
+
+  // ───────── Synced Call Termination (Participant Monitoring) ─────────
+  useEffect(() => {
+    if (lk.remoteParticipantCount > 0) {
+      setHasRemoteJoined(true);
+    }
+    // If someone was present and now they've left, terminate for this side too
+    if (hasRemoteJoined && lk.remoteParticipantCount === 0 && !isEnding && !loading) {
+      handleEndCall();
+    }
+  }, [lk.remoteParticipantCount, hasRemoteJoined, isEnding, loading, handleEndCall]);
 
   useEffect(() => {
     const track = lk.remoteAudioTrack;
@@ -266,9 +273,6 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
           </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <div className="hidden md:block text-[10px] text-neutral-500 uppercase font-bold tracking-tighter mr-2">
-            Dynamic Sync Timer (Local Reference)
-          </div>
           {remaining !== null && remaining <= 60 && remaining > 0 && (
             <div className="animate-bounce px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-[10px] sm:text-xs text-amber-300 font-bold uppercase tracking-wider">
               The meeting will be end soon

@@ -25,6 +25,7 @@ export function useLiveKit() {
   const [isCamOn, setIsCamOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isScreenShareSupported, setIsScreenShareSupported] = useState(false);
+  const [remoteParticipantCount, setRemoteParticipantCount] = useState(0);
 
   useEffect(() => {
     setIsScreenShareSupported(
@@ -110,7 +111,7 @@ export function useLiveKit() {
   }, [routeTrackIn]);
 
   // ───────── CONNECT ─────────
-  const connect = useCallback(async (livekitUrl, livekitToken, onRemoteLeave) => {
+  const connect = useCallback(async (livekitUrl, livekitToken) => {
     if (connectPromiseRef.current) return connectPromiseRef.current;
 
     const promise = (async () => {
@@ -146,6 +147,7 @@ export function useLiveKit() {
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         console.log("ParticipantConnected:", participant.identity);
+        setRemoteParticipantCount(room.remoteParticipants.size);
 
         participant.trackPublications?.forEach((publication) => {
           if (!publication.isSubscribed) {
@@ -161,16 +163,12 @@ export function useLiveKit() {
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
         console.log("ParticipantDisconnected:", participant.identity);
+        setRemoteParticipantCount(room.remoteParticipants.size);
         setRemoteTracks((prev) => {
           const updated = { ...prev };
           delete updated[participant.identity];
           return updated;
         });
-        
-        // If the 1:1 partner leaves, notify the component
-        if (room.remoteParticipants.size === 0) {
-          onRemoteLeave?.();
-        }
       });
 
       // LOCAL TRACKS
@@ -226,6 +224,7 @@ export function useLiveKit() {
 
         // Sync tracks from participants who were already in the room
         syncExistingParticipants(room);
+        setRemoteParticipantCount(room.remoteParticipants.size);
 
         setIsMicOn(room.localParticipant.isMicrophoneEnabled);
         setIsCamOn(room.localParticipant.isCameraEnabled);
@@ -342,6 +341,7 @@ export function useLiveKit() {
     isCamOn,
     isScreenSharing,
     isScreenShareSupported,
+    remoteParticipantCount,
     isConnected: connectionState === ConnectionState.Connected,
   };
 }
