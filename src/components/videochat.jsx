@@ -13,8 +13,10 @@ import {
   FaPhoneSlash,
   FaTimes,
   FaCircle,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import { getAccessToken } from "../redux/store/tokenManager";
+import ModalOverlay from "./ui/ModalOverlay";
 import { useLiveKit } from "./hooks/useLiveKit";
 import { useCallChat } from "./hooks/useCallChat";
 import {
@@ -83,6 +85,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   const [activePanel, setActivePanel] = useState(null); // "chat" | "notes" | null
   const [note, setNote] = useState("");
   const [chatInput, setChatInput] = useState("");
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [lastSeenCount, setLastSeenCount] = useState(0);
   const timerRef = useRef(null);
 
@@ -169,11 +172,6 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   const [isEnding, setIsEnding] = useState(false);
 
   const handleEndCall = useCallback(async () => {
-    if (isEnding) return;
-    
-    const confirmEnd = window.confirm("Are you sure you want to end this call?");
-    if (!confirmEnd) return;
-
     setIsEnding(true);
     try {
       await lk.disconnect().catch(() => {});
@@ -184,7 +182,12 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
       // Force navigation back to bookings no matter what
       onCallEnd?.();
     }
-  }, [lk, chat, call_room_id, onCallEnd, isEnding]);
+  }, [lk, chat, call_room_id, onCallEnd]);
+
+  const triggerEndCall = () => {
+    if (isEnding) return;
+    setShowEndConfirm(true);
+  };
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -497,7 +500,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             highlight={lk.isScreenSharing}
             icon={<FaDesktop />}
             label={lk.isScreenSharing ? "Stop share" : "Share"}
-            disabled={!lk.isScreenShareSupported && !lk.isScreenSharing}
+            disabled={!lk.isScreenSharing && false} // Removed hardware gate to allow attempts
           />
           <ToolbarButton
             onClick={() => openPanel("chat")}
@@ -516,7 +519,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
           <div className="w-px h-8 bg-neutral-800 mx-0.5 sm:mx-1" />
 
           <button
-            onClick={handleEndCall}
+            onClick={triggerEndCall}
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-10 sm:h-12 rounded-full bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-500/20"
             title="End call"
           >
@@ -525,7 +528,47 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
           </button>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showEndConfirm}
+        onCancel={() => setShowEndConfirm(false)}
+        onConfirm={() => {
+          setShowEndConfirm(false);
+          handleEndCall();
+        }}
+        title="End Call?"
+        message="Are you sure you want to leave this meeting?"
+      />
     </div>
+  );
+}
+
+function ConfirmationModal({ isOpen, onConfirm, onCancel, title, message }) {
+  if (!isOpen) return null;
+  return (
+    <ModalOverlay close={onCancel}>
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-scaleIn text-center">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+          <FaExclamationTriangle className="text-red-500 text-xl" />
+        </div>
+        <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+        <p className="text-neutral-400 mb-6 text-sm">{message}</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onCancel}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium transition"
+          >
+            Go back
+          </button>
+          <button 
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition shadow-lg shadow-red-600/20"
+          >
+            End Call
+          </button>
+        </div>
+      </div>
+    </ModalOverlay>
   );
 }
 
