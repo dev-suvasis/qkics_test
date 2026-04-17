@@ -24,6 +24,13 @@ export function useLiveKit() {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isScreenShareSupported, setIsScreenShareSupported] = useState(false);
+
+  useEffect(() => {
+    setIsScreenShareSupported(
+      !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)
+    );
+  }, []);
 
   // ───────── TRACK ROUTING ─────────
   const routeTrackIn = useCallback((track, participant) => {
@@ -261,9 +268,16 @@ export function useLiveKit() {
     const room = roomRef.current;
     if (!room) return;
 
-    const next = !room.localParticipant.isScreenShareEnabled;
-    await room.localParticipant.setScreenShareEnabled(next);
-    setIsScreenSharing(next);
+    try {
+      const next = !room.localParticipant.isScreenShareEnabled;
+      await room.localParticipant.setScreenShareEnabled(next);
+      setIsScreenSharing(next);
+    } catch (err) {
+      console.error("Failed to toggle screen share:", err);
+      // On mobile/unsupported browsers, this will throw
+      setIsScreenSharing(false);
+      throw err;
+    }
   }, []);
 
   const disconnect = useCallback(async () => {
@@ -322,6 +336,7 @@ export function useLiveKit() {
     isMicOn,
     isCamOn,
     isScreenSharing,
+    isScreenShareSupported,
     isConnected: connectionState === ConnectionState.Connected,
   };
 }

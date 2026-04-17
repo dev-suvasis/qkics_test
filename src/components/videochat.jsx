@@ -61,7 +61,7 @@ function SafeVideoRenderer({ track, isLocal = false, isScreen = false, className
       ref={videoRef}
       autoPlay
       playsInline
-      muted={isLocal}
+      muted={true} // Always mute video tags as audio is handled separately; ensures auto-play on mobile
       style={{ objectFit: isScreen ? "contain" : (isLocal ? "cover" : "contain") }}
       className={`w-full h-full bg-black/40 transition-opacity duration-300 ${className}`}
     />
@@ -299,7 +299,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
           {/* Remote Side-PiP (Visible when screen sharing) */}
           {lk.screenShareTrack && lk.remoteVideoTrack && (
-            <div className="absolute bottom-32 sm:bottom-40 right-2 sm:right-4 w-28 sm:w-48 aspect-video rounded-lg overflow-hidden border border-neutral-700 shadow-2xl z-20">
+            <div className="absolute bottom-28 sm:bottom-40 right-2 sm:right-4 w-28 sm:w-48 aspect-video rounded-lg overflow-hidden border border-neutral-700 shadow-2xl z-20">
               <SafeVideoRenderer track={lk.remoteVideoTrack} />
             </div>
           )}
@@ -479,10 +479,17 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             label={lk.isCamOn ? "Stop video" : "Start video"}
           />
           <ToolbarButton
-            onClick={lk.toggleScreenShare}
+            onClick={async () => {
+              try {
+                await lk.toggleScreenShare();
+              } catch (err) {
+                alert("Screen sharing is not supported on this mobile device/browser.");
+              }
+            }}
             highlight={lk.isScreenSharing}
             icon={<FaDesktop />}
             label={lk.isScreenSharing ? "Stop share" : "Share"}
+            disabled={!lk.isScreenShareSupported && !lk.isScreenSharing}
           />
           <ToolbarButton
             onClick={() => openPanel("chat")}
@@ -498,15 +505,15 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
             label="Notes"
           />
 
-          <div className="w-px h-8 bg-neutral-800 mx-1" />
+          <div className="w-px h-8 bg-neutral-800 mx-0.5 sm:mx-1" />
 
           <button
             onClick={handleEndCall}
-            className="flex items-center gap-2 px-4 h-12 rounded-full bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-500/20"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-10 sm:h-12 rounded-full bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-500/20"
             title="End call"
           >
-            <FaPhoneSlash className="text-base" />
-            <span className="text-sm font-medium">End</span>
+            <FaPhoneSlash className="text-sm sm:text-base" />
+            <span className="text-xs sm:text-sm font-medium">End</span>
           </button>
         </div>
       </div>
@@ -514,18 +521,26 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
   );
 }
 
-function ToolbarButton({ onClick, active = true, highlight = false, icon, label, badge = 0 }) {
-  const base = "relative flex flex-col items-center justify-center w-14 h-12 rounded-full transition text-[10px] gap-0.5";
+function ToolbarButton({ onClick, active = true, highlight = false, icon, label, badge = 0, disabled = false }) {
+  const base = "relative flex flex-col items-center justify-center w-11 sm:w-14 h-10 sm:h-12 rounded-full transition text-[10px] gap-0.5";
   const style = highlight
     ? "bg-blue-600 hover:bg-blue-500 text-white"
     : active
     ? "bg-neutral-800 hover:bg-neutral-700 text-white"
     : "bg-red-600/90 hover:bg-red-500 text-white";
+  
+  const disabledStyle = disabled ? "opacity-30 cursor-not-allowed grayscale" : "";
+
   return (
-    <button onClick={onClick} className={`${base} ${style}`} title={label}>
-      <span className="text-base">{icon}</span>
+    <button 
+      onClick={disabled ? undefined : onClick} 
+      className={`${base} ${style} ${disabledStyle}`} 
+      title={label}
+      disabled={disabled}
+    >
+      <span className="text-sm sm:text-base">{icon}</span>
       {badge > 0 && (
-        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-semibold flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1 rounded-full bg-red-500 text-[9px] sm:text-[10px] font-semibold flex items-center justify-center">
           {badge > 9 ? "9+" : badge}
         </span>
       )}
