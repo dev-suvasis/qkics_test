@@ -142,12 +142,16 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
     if (remaining === null) return;
     timerRef.current = setInterval(() => {
       setRemaining((s) => {
-        if (s <= 1) { clearInterval(timerRef.current); return 0; }
+        if (s <= 0) {
+          clearInterval(timerRef.current);
+          handleEndCall();
+          return 0;
+        }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [remaining === null]);
+  }, [remaining === null, handleEndCall]);
 
   useEffect(() => {
     const track = lk.remoteAudioTrack;
@@ -258,6 +262,11 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
           </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          {remaining !== null && remaining <= 60 && remaining > 0 && (
+            <div className="animate-bounce px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-[10px] sm:text-xs text-amber-300 font-bold uppercase tracking-wider">
+              The meeting will be end soon
+            </div>
+          )}
           {remaining !== null && (
             <div
               className={`px-2 sm:px-3 py-1 rounded-md font-mono text-xs sm:text-sm tabular-nums ${
@@ -306,7 +315,7 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
           {/* Remote Side-PiP (Visible when screen sharing) */}
           {lk.screenShareTrack && lk.remoteVideoTrack && (
-            <div className="absolute bottom-28 sm:bottom-40 right-2 sm:right-4 w-28 sm:w-48 aspect-video rounded-lg overflow-hidden border border-neutral-700 shadow-2xl z-20">
+            <div className="absolute bottom-52 sm:bottom-64 right-2 sm:right-4 w-28 sm:w-48 aspect-video rounded-lg overflow-hidden border border-neutral-700 shadow-2xl z-20 transition-all duration-500">
               <SafeVideoRenderer track={lk.remoteVideoTrack} />
             </div>
           )}
