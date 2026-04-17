@@ -170,6 +170,10 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
 
   const handleEndCall = useCallback(async () => {
     if (isEnding) return;
+    
+    const confirmEnd = window.confirm("Are you sure you want to end this call?");
+    if (!confirmEnd) return;
+
     setIsEnding(true);
     try {
       await lk.disconnect().catch(() => {});
@@ -483,7 +487,11 @@ export default function VideoCallComponent({ call_room_id, token, onCallEnd }) {
               try {
                 await lk.toggleScreenShare();
               } catch (err) {
-                alert("Screen sharing is not supported on this mobile device/browser.");
+                // If the user simply cancelled the share dialog, don't show an error alert
+                if (err.name === "NotAllowedError" || err.message?.includes("Permission denied")) {
+                  return;
+                }
+                alert("Screen sharing failed: It may be unsupported on this device or blocked by your browser settings.");
               }
             }}
             highlight={lk.isScreenSharing}
