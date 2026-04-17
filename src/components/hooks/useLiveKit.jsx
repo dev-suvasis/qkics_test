@@ -147,7 +147,7 @@ export function useLiveKit() {
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         console.log("ParticipantConnected:", participant.identity);
-        setRemoteParticipantCount(room.remoteParticipants.size);
+        setRemoteParticipantCount(room?.remoteParticipants?.size || 0);
 
         participant.trackPublications?.forEach((publication) => {
           if (!publication.isSubscribed) {
@@ -163,7 +163,7 @@ export function useLiveKit() {
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
         console.log("ParticipantDisconnected:", participant.identity);
-        setRemoteParticipantCount(room.remoteParticipants.size);
+        setRemoteParticipantCount(room?.remoteParticipants?.size || 0);
         setRemoteTracks((prev) => {
           const updated = { ...prev };
           delete updated[participant.identity];
@@ -224,7 +224,7 @@ export function useLiveKit() {
 
         // Sync tracks from participants who were already in the room
         syncExistingParticipants(room);
-        setRemoteParticipantCount(room.remoteParticipants.size);
+        setRemoteParticipantCount(room?.remoteParticipants?.size || 0);
 
         setIsMicOn(room.localParticipant.isMicrophoneEnabled);
         setIsCamOn(room.localParticipant.isCameraEnabled);
