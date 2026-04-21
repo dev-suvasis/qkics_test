@@ -1,0 +1,209 @@
+API Changes — Old vs New
+1. Expert Slot Create
+POST /api/v1/bookings/experts/slots/
+
+Before:
+
+
+{
+"start_datetime": "2025-05-01T10:00:00Z",
+"end_datetime": "2025-05-01T10:30:00Z",
+"duration_minutes": 30,
+"price": "500.00",
+"requires_approval": true
+}
+After:
+
+
+{
+"start_datetime": "2025-05-01T10:00:00Z",
+"end_datetime": "2025-05-01T10:30:00Z",
+"duration_minutes": 30,
+"chat_price": "300.00",
+"video_call_price": "500.00",
+"requires_approval": true
+}
+
+Actual payload :
+
+{start_datetime: "2026-04-20T06:24:00.000Z", end_datetime: "2026-04-20T06:29:00.000Z",…}
+chat_price:1000
+duration_minutes:5
+end_datetime:"2026-04-20T06:29:00.000Z"
+is_chat_available:true
+is_video_call_available:true
+requires_approval:true
+start_datetime:"2026-04-20T06:24:00.000Z"
+video_call_price:2000
+
+
+2. Expert Slot Update
+PATCH /api/v1/bookings/experts/slots/<slot_uuid>/
+
+  Before:
+
+
+  { "price": "500.00" }
+  After:
+
+
+  { "chat_price": "300.00", "video_call_price": "500.00" }
+
+Actual payload :
+
+  {start_datetime: "2026-04-20T06:35:00.000Z", end_datetime: "2026-04-20T06:40:00.000Z",…}
+chat_price: 1000
+duration_minutes: 5
+end_datetime: "2026-04-20T06:40:00.000Z"
+is_chat_available: true
+is_video_call_available: false
+requires_approval: true
+start_datetime: "2026-04-20T06:35:00.000Z"
+video_call_price: 0
+
+
+
+  3. Expert Slot List
+  GET /api/v1/bookings/experts/<expert_uuid>/slots/
+
+    Before (response):
+
+
+    [
+    {
+    "uuid": "...",
+    "price": "500.00",
+    "is_available": true,
+    ...
+    }
+    ]
+    After (response):
+
+
+    [
+
+    {
+    "uuid": "...",
+    "chat_price": "300.00",
+    "video_call_price": "500.00",
+    "is_chat_available": true,
+    "is_video_call_available": false,
+    ...
+    }
+    ]
+    is_available field removed. Use is_chat_available and is_video_call_available separately to show which options user
+    can book.
+    if slot is booked both will be false
+    "is_chat_available": false,
+    "is_video_call_available": false,
+
+    Actual response :
+
+    [
+    {
+        "id": 16,
+        "uuid": "099dbe20-0d8f-4d98-9ec6-704f649a8c17",
+        "expert": 3,
+        "expert_name": "suvasis",
+        "start_datetime": "2026-04-20T12:05:00+05:30",
+        "end_datetime": "2026-04-20T12:10:00+05:30",
+        "duration_minutes": 5,
+        "chat_price": "1000.00",
+        "video_call_price": "2000.00",
+        "requires_approval": true,
+        "is_recurring": false,
+        "status": "ACTIVE",
+        "is_chat_available": true,
+        "is_video_call_available": true,
+        "created_at": "2026-04-20T11:56:17.299749+05:30"
+    }
+]
+
+
+
+
+    4. Booking Create
+    POST /api/v1/bookings/
+
+    Before:
+
+
+    {
+    "slot_id": "<slot_uuid>"
+      }
+      After:
+
+
+      {
+      "slot_id": "<slot_uuid>",
+        "session_type": "CHAT"
+        }
+        session_type is required. Values: "CHAT" or "VIDEO_CALL"
+
+        Price is auto-calculated from the slot based on session_type — frontend doesn't send price.
+
+        Actual payload :
+
+        {slot_id: "099dbe20-0d8f-4d98-9ec6-704f649a8c17", session_type: "CHAT"}
+session_type: "CHAT"
+slot_id: "099dbe20-0d8f-4d98-9ec6-704f649a8c17"
+
+
+
+        5. Booking Detail / List
+        GET /api/v1/bookings/ and GET /api/v1/bookings/<booking_uuid>/
+
+          Before (response):
+
+
+          {
+          "price": "500.00",
+          "chat_room_id": "abc-123",
+          "call_room_id": "xyz-456",
+          ...
+          }
+          After (response):
+
+
+          [
+          {
+          "id": 3,
+          "uuid": "f01d2961-35d2-436d-a8fd-c52e4426440b",
+          "user": 2,
+          "user_name": "sandip",
+          "expert": 3,
+          "expert_name": "suvasis",
+          "slot": 14,
+          "slot_uuid": "4123cc99-1795-4634-a663-10afacab15fa",
+          "status": "CONFIRMED",
+          "start_datetime": "2026-04-18T15:45:00+05:30",
+          "end_datetime": "2026-04-18T15:55:00+05:30",
+          "duration_minutes": 10,
+          "price": "3000.00",
+          "platform_fee_percent": "20.00",
+          "platform_fee_amount": "600.00",
+          "expert_earning_amount": "2400.00",
+          "requires_expert_approval": true,
+          "expert_approved_at": "2026-04-18T15:31:17.636417+05:30",
+          "paid_at": "2026-04-18T15:31:17.636412+05:30",
+          "confirmed_at": "2026-04-18T15:31:17.636416+05:30",
+          "completed_at": null,
+          "declined_at": null,
+          "cancelled_at": null,
+          "session_type": "VIDEO_CALL",
+          "chat_room_id": null,
+          "reschedule_count": 0,
+          "cancellation_reason": null,
+          "decline_reason": null,
+          "created_at": "2026-04-18T15:31:17.527374+05:30",
+          "updated_at": "2026-04-18T15:31:18.171084+05:30",
+          "can_be_cancelled": true,
+          "call_room_id": "9b600de0-9a22-4a0a-b2f9-1195f5480907"
+          }
+          ]
+          New field: session_type — tells frontend what type of session this booking is for.
+
+          Room logic:
+
+          session_type: "CHAT" → chat_room_id populated, call_room_id is null
+          session_type: "VIDEO_CALL" → call_room_id populated, chat_room_id is null

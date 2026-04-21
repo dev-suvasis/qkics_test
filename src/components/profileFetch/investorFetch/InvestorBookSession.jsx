@@ -46,7 +46,7 @@ export default function InvestorBookSession() {
       const slotsData = Array.isArray(responseData) ? responseData : (responseData?.results || []);
 
       const availableSlots = slotsData.filter(
-        (slot) => slot.is_available === true
+        (slot) => Boolean(slot.is_available)
       );
 
       setSlots(availableSlots);

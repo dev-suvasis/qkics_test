@@ -30,6 +30,7 @@ export default function BookSession() {
   const [error, setError] = useState("");
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [bookingType, setBookingType] = useState("CHAT"); // "CHAT" or "VIDEO_CALL"
 
   /* ---------------- FETCH SLOTS ---------------- */
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function BookSession() {
       );
 
       const availableSlots = (res.data || []).filter(
-        (slot) => slot.is_available === true
+        (slot) => Boolean(slot.is_chat_available || slot.is_video_call_available)
       );
 
       setSlots(availableSlots);
@@ -57,13 +58,26 @@ export default function BookSession() {
     }
   };
 
+  // Auto-select booking type when slot changes
+  useEffect(() => {
+    if (!selectedSlot) return;
+
+    if (Number(selectedSlot.chat_price) > 0 && selectedSlot.is_chat_available) {
+      setBookingType("CHAT");
+    } else if (Number(selectedSlot.video_call_price) > 0 && selectedSlot.is_video_call_available) {
+      setBookingType("VIDEO_CALL");
+    }
+  }, [selectedSlot]);
+
   /* ---------------- FAKE PAYMENT FLOW ---------------- */
   const handleProceedToPay = () => {
     if (!selectedSlot || paymentProcessing) return;
 
+    const currentPrice = bookingType === "CHAT" ? selectedSlot.chat_price : selectedSlot.video_call_price;
+
     showConfirm({
       title: "Confirm Payment",
-      message: `You will be charged ₹${selectedSlot.price} for this session. Continue?`,
+      message: `You will be charged ₹${currentPrice} for this ${bookingType === "CHAT" ? "Chat" : "Video Call"} session. Continue?`,
       confirmText: "Pay Now",
       cancelText: "Cancel",
 
@@ -73,7 +87,7 @@ export default function BookSession() {
         try {
           /* 1️⃣ CREATE BOOKING */
           const booking = await dispatch(
-            createBooking(selectedSlot.uuid)
+            createBooking({ slotUuid: selectedSlot.uuid, bookingType })
           ).unwrap();
 
           console.log("✅ Booking created:", booking);
@@ -241,8 +255,21 @@ export default function BookSession() {
                               </div>
                             </div>
 
-                            <div className={`mt-2 text-lg font-black pt-4 border-t w-full transition-colors ${isSelected ? "border-red-600/20 text-red-600" : isDark ? "border-white/10" : "border-black/10"}`}>
-                              ₹{slot.price}
+                            <div className={`mt-2 pt-4 border-t w-full transition-colors ${isSelected ? "border-red-600/20" : isDark ? "border-white/10" : "border-black/10"}`}>
+                              <div className="flex flex-col gap-1.5">
+                                {Number(slot.chat_price) > 0 && (
+                                  <div className="flex justify-between items-center w-full">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Chat Price</span>
+                                    <span className={`text-base font-black ${isSelected ? "text-red-600" : ""}`}>₹{slot.chat_price}</span>
+                                  </div>
+                                )}
+                                {Number(slot.video_call_price) > 0 && (
+                                  <div className="flex justify-between items-center w-full">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Video Call Price</span>
+                                    <span className={`text-base font-black ${isSelected ? "text-red-600" : ""}`}>₹{slot.video_call_price}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -274,6 +301,34 @@ export default function BookSession() {
               <div className="space-y-8 animate-fadeIn">
 
                 <div className={`p-6 rounded-3xl ${isDark ? "bg-white/5" : "bg-neutral-50"}`}>
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-3">Consultation Type</p>
+                  <div className="flex gap-2 mb-5">
+                    {Number(selectedSlot.chat_price) > 0 && (
+                      <button
+                        onClick={() => setBookingType("CHAT")}
+                        disabled={!selectedSlot.is_chat_available}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${!selectedSlot.is_chat_available ? "opacity-30 cursor-not-allowed grayscale" : ""} ${bookingType === "CHAT"
+                          ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-600/20"
+                          : "border-neutral-500/20 text-neutral-500 hover:border-neutral-500/40"
+                          }`}
+                      >
+                        {selectedSlot.is_chat_available ? "Chat" : "Chat (Booked)"}
+                      </button>
+                    )}
+                    {Number(selectedSlot.video_call_price) > 0 && (
+                      <button
+                        onClick={() => setBookingType("VIDEO_CALL")}
+                        disabled={!selectedSlot.is_video_call_available}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${!selectedSlot.is_video_call_available ? "opacity-30 cursor-not-allowed grayscale" : ""} ${bookingType === "VIDEO_CALL"
+                          ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-600/20"
+                          : "border-neutral-500/20 text-neutral-500 hover:border-neutral-500/40"
+                          }`}
+                      >
+                        {selectedSlot.is_video_call_available ? "Video" : "Video (Booked)"}
+                      </button>
+                    )}
+                  </div>
+
                   <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-2">Selected Time</p>
                   <p className="font-bold text-lg leading-snug">
                     {formatDateTime(selectedSlot.start_datetime).date}
@@ -290,14 +345,16 @@ export default function BookSession() {
                   </div>
                   <div className="flex justify-between items-center text-sm font-medium">
                     <span className="opacity-60">Session Fee</span>
-                    <span className="font-bold">₹{selectedSlot.price}</span>
+                    <span className="font-bold">₹{bookingType === "CHAT" ? selectedSlot.chat_price : selectedSlot.video_call_price}</span>
                   </div>
                 </div>
 
                 <div className="pt-8 border-t border-dashed border-neutral-500/30 px-2">
                   <div className="flex justify-between items-end">
                     <span className="text-xs font-black uppercase tracking-widest opacity-60">Total</span>
-                    <span className="text-4xl font-black text-red-600 tracking-tighter">₹{selectedSlot.price}</span>
+                    <span className="text-4xl font-black text-red-600 tracking-tighter">
+                      ₹{bookingType === "CHAT" ? selectedSlot.chat_price : selectedSlot.video_call_price}
+                    </span>
                   </div>
                 </div>
 

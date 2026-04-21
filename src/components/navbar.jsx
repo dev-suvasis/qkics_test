@@ -175,7 +175,7 @@ function Navbar({ theme, onToggleTheme, user, onOpenLogin, onOpenCreatePost }) {
                       </div>
                     </div>
                     <div className={`w-px ${isDark ? "bg-white/5" : "bg-black/5"}`} />
-                    <div className="flex-1 flex flex-col pt-1">
+                    {/* <div className="flex-1 flex flex-col pt-1">
                       <h3 className="text-sm font-black uppercase tracking-[0.2em] mb-4 text-red-600 ml-2">Organizations</h3>
                       <div className="space-y-1">
                         <button
@@ -187,7 +187,7 @@ function Navbar({ theme, onToggleTheme, user, onOpenLogin, onOpenCreatePost }) {
                           className={`w-full text-left block px-4 py-3.5 rounded-2xl text-xs font-bold transition-all duration-300 uppercase tracking-widest ${isDark ? "text-neutral-400 hover:text-white hover:bg-neutral-800" : "text-neutral-500 hover:text-black hover:bg-neutral-100"}`}
                         >My Company</button>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               )}

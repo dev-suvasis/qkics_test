@@ -8,10 +8,11 @@ import axiosSecure from "../../components/utils/axiosSecure";
 // CREATE BOOKING
 export const createBooking = createAsyncThunk(
   "booking/create",
-  async (slotUuid, { rejectWithValue }) => {
+  async ({ slotUuid, bookingType }, { rejectWithValue }) => {
     try {
       const res = await axiosSecure.post("/v1/bookings/", {
         slot_id: slotUuid,
+        session_type: bookingType,
       });
 
       return res.data; // { price: "299.00" }

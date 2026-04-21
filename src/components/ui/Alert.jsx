@@ -19,7 +19,7 @@ const Alert = ({ message, type = "info", title, onClose }) => {
   return createPortal(
     <div
       className={`
-        fixed top-14 right-5 z-[9999] 
+        fixed top-14 right-5 z-[10001] 
         px-5 py-3 rounded-md shadow-lg 
         flex items-center gap-3 
         ${colors[type] || colors.info}

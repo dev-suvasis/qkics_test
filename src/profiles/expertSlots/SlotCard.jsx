@@ -11,8 +11,8 @@ export default function SlotCard({
   const start = new Date(slot.start_datetime);
   const end = new Date(slot.end_datetime);
 
-  // ✅ BACKEND IS SOURCE OF TRUTH
-  const isAvailable = slot.is_available === true;
+  // ✅ BACKEND IS SOURCE OF TRUTH: Slot is available if at least one service is available
+  const isAvailable = Boolean(slot.is_chat_available || slot.is_video_call_available);
 
   const sameDay = start.toLocaleDateString() === end.toLocaleDateString();
 
@@ -50,12 +50,20 @@ export default function SlotCard({
       <div className={`h-px w-full my-4 ${isDark ? "bg-white/10" : "bg-black/5"}`}></div>
 
       {/* INFO GRID */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-2 gap-y-4 gap-x-2 mb-4">
         <div>
-          <span className="text-[10px] font-black uppercase tracking-widest opacity-50 block mb-1">Price</span>
-          <span className="font-bold text-lg text-red-600">₹{slot.price}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest opacity-50 block mb-1">Chat Price</span>
+          <span className={`font-bold text-base ${Number(slot.chat_price) > 0 ? "text-red-600" : "text-neutral-400"}`}>
+            {Number(slot.chat_price) > 0 ? `₹${slot.chat_price}` : "N/A"}
+          </span>
         </div>
         <div>
+          <span className="text-[10px] font-black uppercase tracking-widest opacity-50 block mb-1">Video Price</span>
+          <span className={`font-bold text-base ${Number(slot.video_call_price) > 0 ? "text-red-600" : "text-neutral-400"}`}>
+            {Number(slot.video_call_price) > 0 ? `₹${slot.video_call_price}` : "N/A"}
+          </span>
+        </div>
+        <div className="col-span-2">
           <span className="text-[10px] font-black uppercase tracking-widest opacity-50 block mb-1">Duration</span>
           <span className={`font-bold text-sm opacity-90`}>{slot.duration_minutes} mins</span>
         </div>

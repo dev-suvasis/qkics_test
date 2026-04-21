@@ -23,7 +23,7 @@ const ConfirmationAlert = ({
   }, [onCancel]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center">
       {/* Background */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"

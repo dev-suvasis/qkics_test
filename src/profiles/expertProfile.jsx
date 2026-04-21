@@ -360,7 +360,7 @@ export default function ExpertProfile({
       <div className="max-w-7xl mx-auto">
 
         {/* HEADER */}
-        <div className={`premium-card p-8 md:p-12 mb-5  ${isDark ? "bg-neutral-900" : "bg-white"}`}>
+        <div className={`premium-card p-4 md:p-7 mb-5  ${isDark ? "bg-neutral-900" : "bg-white"}`}>
           <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-12">
 
             {/* PROFILE PICTURE */}

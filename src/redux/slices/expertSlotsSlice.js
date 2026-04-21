@@ -125,7 +125,8 @@ const expertSlotsSlice = createSlice({
         // ✅ Normalize uuid: some API responses use 'id' — ensure uuid is always present
         const payload = action.payload || {};
         const newSlot = {
-          is_available: true,
+          is_chat_available: true,
+          is_video_call_available: true,
           status: "ACTIVE",
           ...payload,
           uuid: payload.uuid ?? payload.id,

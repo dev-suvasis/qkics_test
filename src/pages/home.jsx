@@ -337,7 +337,7 @@ function Home() {
           <div className="relative max-w-[95vw] max-h-[95vh] animate-scaleIn" onClick={(e) => e.stopPropagation()}>
             <div className="absolute -top-12 right-0 flex gap-4">
               <button onClick={() => downloadImage(previewImage)} className="bg-white/10 text-white rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-red-500 transition-all font-bold text-xs"><MdOutlineFileDownload size={18} /> SAVE</button>
-              <button onClick={() => { setPreviewImage(null); setZoom(1); }} className="bg-white/10 text-white rounded-xl px-4 py-2 hover:bg-neutral-800 transition-all font-bold text-xs">CLOSE</button>
+              <button onClick={() => { setPreviewImage(null); setZoom(1); }} className="bg-white/10 text-white rounded-xl px-4 py-2 hover:bg-red-500 transition-all font-bold text-xs">CLOSE</button>
             </div>
             <img src={previewImage} alt="Preview" className="rounded-2xl shadow-2xl max-w-full max-h-[85vh] object-contain transition-transform duration-300" style={{ transform: `scale(${zoom})` }} onDoubleClick={() => setZoom((z) => (z === 1 ? 2 : 1))} />
           </div>

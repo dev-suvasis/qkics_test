@@ -206,19 +206,22 @@ export default function MyBookings() {
                         <h4 className={`font-black text-lg tracking-tight mb-2 group-hover:text-red-500 transition-colors ${text}`}>
                           {otherPersonName}
                         </h4>
-                        <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] uppercase font-black tracking-widest border shadow-sm transition-all duration-500 ${status.color}`}>
-                          {status.label}
-                        </span>
-                        {booking._role === "attending" && (
-                           <span className={`ml-2 inline-block px-3 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border border-red-500/20 bg-red-500/5 text-red-500`}>
-                             My Booking
-                           </span>
-                        )}
-                        {booking._role === "conducting" && (
-                           <span className={`ml-2 inline-block px-3 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border border-purple-500/20 bg-purple-500/5 text-purple-500`}>
-                             My Session
-                           </span>
-                        )}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] uppercase font-black tracking-widest border shadow-sm transition-all duration-500 ${status.color}`}>
+                            {status.label}
+                          </span>
+
+                          {booking._role === "attending" && (
+                            <span className={`inline-block px-3 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border border-red-500/20 bg-red-500/5 text-red-500`}>
+                              My Booking
+                            </span>
+                          )}
+                          {booking._role === "conducting" && (
+                            <span className={`inline-block px-3 py-1.5 rounded-full text-[9px] uppercase font-black tracking-widest border border-purple-500/20 bg-purple-500/5 text-purple-500`}>
+                              My Session
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -229,13 +232,26 @@ export default function MyBookings() {
                         <div className="mt-0.5 text-red-500">
                           <MdOutlineSchedule size={20} />
                         </div>
-                        <div>
-                          <p className={`text-sm font-black mb-1 ${text}`}>{startDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
-                          <p className="text-[11px] font-bold opacity-40 uppercase tracking-tighter">
-                            {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            {' — '}
-                            {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                        <div className="flex-1 flex items-start justify-between gap-4">
+                          <div>
+                            <p className={`text-sm font-black mb-1 ${text}`}>{startDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+                            <p className="text-[11px] font-bold opacity-40 uppercase tracking-tighter">
+                              {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {' — '}
+                              {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${isDark ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-black/40"}`}>
+                            {booking.session_type === "VIDEO_CALL" ? (
+                              <>
+                                <MdVideocam size={12} className="text-red-500" /> Video
+                              </>
+                            ) : (
+                              <>
+                                <MdChatBubbleOutline size={12} className="text-red-500" /> Chat
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -261,23 +277,24 @@ export default function MyBookings() {
                   {(booking.chat_room_id || booking.call_room_id || ['CONFIRMED', 'PAID', 'COMPLETED'].includes(status.label)) && (
                     now >= startDate ? (
                       <div className="flex flex-col gap-3">
-                        {booking.call_room_id && (
+                        {booking.session_type === "VIDEO_CALL" ? (
                           <button
-                            onClick={() => navigate(`/video-call/${booking.call_room_id}`)}
+                            onClick={() => booking.call_room_id ? navigate(`/video-call/${booking.call_room_id}`) : showAlert("Video room not ready yet", "info")}
                             className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-600/30 hover:scale-105 active:scale-95 transition-all"
                           >
                             <MdVideocam size={20} />
-                            Join Call
+                            Start Video Call
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => navigate(booking.chat_room_id ? `/chat/${booking.chat_room_id}` : '/chat')}
+                            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-600/30 hover:scale-105 active:scale-95 transition-all"
+                          >
+                            <MdChatBubbleOutline size={20} />
+                            {booking.session_type === "CHAT" ? "Start Chat" : "Open Communication"}
                           </button>
                         )}
-                        <button
-                          onClick={() => navigate(booking.chat_room_id ? `/chat/${booking.chat_room_id}` : '/chat')}
-                          className={`w-full flex items-center justify-center gap-3 px-6 py-4 ${booking.call_room_id ? 'bg-neutral-800 text-white' : 'bg-red-600 text-white'} rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-600/30 hover:scale-105 active:scale-95 transition-all`}
-                        >
-                          <MdChatBubbleOutline size={20} />
-                          Open Communication
-                        </button>    
-                      </div>  
+                      </div>
                     ) : (
                       <button
                         disabled

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAlert } from "../../context/AlertContext";
+import { useConfirm } from "../../context/ConfirmContext";
+
 
 export default function SlotForm({
   initialData,
@@ -9,11 +11,13 @@ export default function SlotForm({
 }) {
   const isEdit = Boolean(initialData);
   const { showAlert } = useAlert();
+  const { showConfirm } = useConfirm();
 
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [duration, setDuration] = useState(0);
-  const [price, setPrice] = useState("");
+  const [chatPrice, setChatPrice] = useState("");
+  const [videoCallPrice, setVideoCallPrice] = useState("");
   const [requiresApproval, setRequiresApproval] = useState(true);
 
   // Helper: Convert Date or ISO string to local YYYY-MM-DDTHH:mm
@@ -34,7 +38,8 @@ export default function SlotForm({
     setStart(toLocalString(initialData.start_datetime));
     setEnd(toLocalString(initialData.end_datetime));
     setDuration(initialData.duration_minutes || 0);
-    setPrice(initialData.price);
+    setChatPrice(initialData.chat_price || "");
+    setVideoCallPrice(initialData.video_call_price || "");
     setRequiresApproval(initialData.requires_approval);
   }, [initialData]);
 
@@ -64,8 +69,13 @@ export default function SlotForm({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!start || !end || price === "" || price === null) {
-      showAlert("All fields are required", "error");
+    if (!start || !end) {
+      showAlert("Start and end times are required", "error");
+      return;
+    }
+
+    if ((chatPrice === "" || chatPrice === null) && (videoCallPrice === "" || videoCallPrice === null)) {
+      showAlert("At least one price (Chat or Video Call) must be set", "error");
       return;
     }
 
@@ -77,15 +87,52 @@ export default function SlotForm({
       return;
     }
 
+    const chatPriceVal = Number(chatPrice) || 0;
+    const videoCallPriceVal = Number(videoCallPrice) || 0;
+
     const payload = {
       start_datetime: startDate.toISOString(),
       end_datetime: endDate.toISOString(),
       duration_minutes: Number(duration),
-      price: Number(price),
+      chat_price: chatPriceVal,
+      video_call_price: videoCallPriceVal,
       requires_approval: requiresApproval,
+      is_chat_available: chatPriceVal > 0,
+      is_video_call_available: videoCallPriceVal > 0,
     };
 
-    onSave(payload, initialData?.uuid);
+    // Confirmation Logic
+    const chatMsg = chatPriceVal > 0 ? `₹${chatPriceVal}` : "Not Available";
+    const videoMsg = videoCallPriceVal > 0 ? `₹${videoCallPriceVal}` : "Not Available";
+
+    showConfirm({
+      title: isEdit ? "Update Slot" : "Create Slot",
+      message: (
+        <div className="space-y-2">
+          <p>Please confirm the slot details:</p>
+          <div className="bg-black/5 dark:bg-white/5 p-4 rounded-xl space-y-1">
+            <div className="flex justify-between">
+              <span className="opacity-60">Chat Consultation:</span>
+              <span className={`font-bold ${chatPriceVal > 0 ? "text-green-500" : "text-red-500"}`}>{chatMsg}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="opacity-60">Video Call:</span>
+              <span className={`font-bold ${videoCallPriceVal > 0 ? "text-green-500" : "text-red-500"}`}>{videoMsg}</span>
+            </div>
+          </div>
+          {(chatPriceVal === 0 || videoCallPriceVal === 0) && (
+            <p className="text-xs text-red-500 font-medium mt-2">
+              Note: Features with "Not Available" cannot be booked by users for this slot.
+            </p>
+          )}
+        </div>
+      ),
+      confirmText: isEdit ? "Update" : "Create",
+      cancelText: "Cancel",
+      onConfirm: () => {
+        onSave(payload, initialData?.uuid);
+      }
+    });
   };
 
   const inputClass = `w-full bg-transparent border-b-2 font-medium focus:outline-none transition-all pb-2 ${isDark
@@ -154,13 +201,27 @@ export default function SlotForm({
 
         <div>
           <label className={labelClass}>
-            Price (₹)
+            Chat Price (₹)
           </label>
           <input
             type="number"
             min={0}
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            value={chatPrice}
+            onChange={(e) => setChatPrice(e.target.value)}
+            className={inputClass}
+            placeholder="0.00"
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Video Call Price (₹)
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={videoCallPrice}
+            onChange={(e) => setVideoCallPrice(e.target.value)}
             className={inputClass}
             placeholder="0.00"
           />

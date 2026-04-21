@@ -12,7 +12,7 @@ export default function InvestorSlotCard({
   const end = new Date(slot.end_datetime);
 
   // ✅ BACKEND IS SOURCE OF TRUTH
-  const isAvailable = slot.is_available === true;
+  const isAvailable = Boolean(slot.is_available);
 
   const sameDay = start.toLocaleDateString() === end.toLocaleDateString();
 
